@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using HourglassPass.Internal;
 
 namespace HourglassPass {
 	/// <summary>
@@ -267,8 +268,180 @@ namespace HourglassPass {
 
 		#endregion
 
-		#region Utilities
-		
+		#region Object Overrides
+
+		/// <summary>
+		///  Gets the string representation of the letter.
+		/// </summary>
+		/// <returns>The string representation of the letter.</returns>
+		public override string ToString() => new string(Character, 1);
+
+		/// <summary>
+		///  Gets the string representation of the letter with the specified formatting.
+		/// </summary>
+		/// <param name="format">
+		///  The format to display the letter in.<para/>
+		///  S/s = Default, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.
+		/// </param>
+		/// <returns>The formatted string representation of the letter.</returns>
+		/// 
+		/// <exception cref="FormatException">
+		///  <paramref name="format"/> is invalid.
+		/// </exception>
+		public string ToString(string format) => ToString(format, CultureInfo.CurrentCulture);
+		/// <summary>
+		///  Gets the string representation of the letter with the specified formatting.
+		/// </summary>
+		/// <param name="format">
+		///  The format to display the letter in.<para/>
+		///  S/s = Default, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.
+		/// </param>
+		/// <param name="formatProvider">Unused.</param>
+		/// <returns>The formatted string representation of the letter.</returns>
+		/// 
+		/// <exception cref="FormatException">
+		///  <paramref name="format"/> is invalid.
+		/// </exception>
+		public string ToString(string format, IFormatProvider formatProvider) => this.Format(format, formatProvider);
+
+		/// <summary>
+		///  Gets the hash code as the letter's value.
+		/// </summary>
+		/// <returns>The letter's value.</returns>
+		public override int GetHashCode() => Value;
+
+		/// <summary>
+		///  Checks if the object is a <see cref="Letter"/>, <see cref="char"/>, or <see cref="int"/> and checks for
+		///  equality between the values of the letters.
+		/// </summary>
+		/// <param name="obj">The object to check for equality with.</param>
+		/// <returns>The object is a compatible type and has the same value as this letter.</returns>
+		public override bool Equals(object obj) {
+			if (obj is Letter l) return Equals(l);
+			if (obj is char c) return Equals(c);
+			if (obj is int i) return Equals(i);
+			return false;
+		}
+		/// <summary>
+		///  Checks for equality between the values of the letters.
+		/// </summary>
+		/// <param name="other">The letter to check for equality with.</param>
+		/// <returns>The letter has the same value as this letter.</returns>
+		public bool Equals(Letter other) => Value == other.Value;
+		/// <summary>
+		///  Checks for equality between the value of the letter to that of the character.
+		/// </summary>
+		/// <param name="other">The character to check for equality with values.</param>
+		/// <returns>The character has the same value as this letter.</returns>
+		public bool Equals(char other) => Value == GetValueOfChar(other);
+		/// <summary>
+		///  Checks for equality between the value with that of this letter.
+		/// </summary>
+		/// <param name="other">The value to check for equality with.</param>
+		/// <returns>The value is the same as this letter's value.</returns>
+		public bool Equals(int other) => Value == other;
+
+		/// <summary>
+		///  Checks if the object is a <see cref="Letter"/>, <see cref="char"/>, or <see cref="int"/> and compares the
+		///  values.
+		/// </summary>
+		/// <param name="obj">The object to compare values with.</param>
+		/// <returns>The comparison of the two objects.</returns>
+		/// 
+		/// <exception cref="ArgumentNullException">
+		///  <paramref name="obj"/> is null.
+		/// </exception>
+		/// <exception cref="ArgumentException">
+		///  <paramref name="obj"/> is not a <see cref="Letter"/>, <see cref="char"/>, or <see cref="int"/>.
+		/// </exception>
+		public int CompareTo(object obj) {
+			if (obj is Letter l) return CompareTo(l);
+			if (obj is char c) return CompareTo(c);
+			if (obj is int i) return CompareTo(i);
+			if (obj is null)
+				throw new ArgumentNullException(nameof(obj));
+			throw new ArgumentException($"Letter cannot be compared against type {obj.GetType().Name}!");
+		}
+		/// <summary>
+		///  Compares the values of the letters.
+		/// </summary>
+		/// <param name="obj">The letter to compare with.</param>
+		/// <returns>The comparison of the two letters.</returns>
+		public int CompareTo(Letter other) => Value.CompareTo(other.Value);
+		/// <summary>
+		///  Compares the values of the letter and character.
+		/// </summary>
+		/// <param name="obj">The character to compare with.</param>
+		/// <returns>The comparison of the letter and character.</returns>
+		public int CompareTo(char other) => Value.CompareTo(GetValueOfChar(other));
+		/// <summary>
+		///  Compares the value with the letter's value.
+		/// </summary>
+		/// <param name="obj">The value to compare with.</param>
+		/// <returns>The comparison of the letter and value.</returns>
+		public int CompareTo(int other) => Value.CompareTo(other);
+
+		#endregion
+
+		#region Parse
+
+		/// <summary>
+		///  Parses the string representation of the letter.
+		/// </summary>
+		/// <param name="s">The string representation of the letter.</param>
+		/// <returns>The parsed letter.</returns>
+		/// 
+		/// <exception cref="ArgumentNullException">
+		///  <paramref name="s"/> is null.
+		/// </exception>
+		/// <exception cref="ArgumentException">
+		///  <paramref name="s"/> is not a valid letter.
+		/// </exception>
+		public static Letter Parse(string s) {
+			return LetterUtils.ParseLetter(s, PasswordStyles.Password);
+		}
+		/// <summary>
+		///  Parses the string representation of the letter.
+		/// </summary>
+		/// <param name="s">The string representation of the letter.</param>
+		/// <param name="style">The style to parse the letter in.</param>
+		/// <returns>The parsed letter.</returns>
+		/// 
+		/// <exception cref="ArgumentNullException">
+		///  <paramref name="s"/> is null.
+		/// </exception>
+		/// <exception cref="ArgumentException">
+		///  <paramref name="s"/> is not a valid letter.-or-<paramref name="style"/> is not a valid
+		///  <see cref="PasswordStyles"/>.
+		/// </exception>
+		public static Letter Parse(string s, PasswordStyles style) {
+			return LetterUtils.ParseLetter(s, style);
+		}
+
+		/// <summary>
+		///  Tries to parse the string representation of the letter.
+		/// </summary>
+		/// <param name="s">The string representation of the letter.</param>
+		/// <param name="letter">The output letter on success.</param>
+		/// <returns>True if the letter was successfully parsed, otherwise false.</returns>
+		public static bool TryParse(string s, out Letter letter) {
+			return LetterUtils.TryParseLetter(s, PasswordStyles.Password, out letter);
+		}
+		/// <summary>
+		///  Tries to parse the string representation of the letter.
+		/// </summary>
+		/// <param name="s">The string representation of the letter.</param>
+		/// <param name="style">The style to parse the letter in.</param>
+		/// <param name="letter">The output letter on success.</param>
+		/// <returns>True if the letter was successfully parsed, otherwise false.</returns>
+		public static bool TryParse(string s, PasswordStyles style, out Letter letter) {
+			return LetterUtils.TryParseLetter(s, style, out letter);
+		}
+
+		#endregion
+
+		#region Mutate
+
 		/// <summary>
 		///  Returns a normalized version of the letter if it's a garbage letter.
 		/// </summary>
@@ -284,6 +457,18 @@ namespace HourglassPass {
 			return this;
 		}
 		/// <summary>
+		///  Returns a letter with a randomized garbage character, if currently using one.
+		/// </summary>
+		/// <returns>The randomized letter.</returns>
+		public Letter Randomized() {
+			if (garbage) {
+				if (IsGarbageChar(character))
+					return new Letter(Garbage[random.Next(Garbage.Length)], true);
+			}
+			return this;
+		}
+
+		/// <summary>
 		///  Normalizes the letter if it's a garbage letter.
 		/// </summary>
 		/// <param name="garbageChar">The character to use for garbage letters.</param>
@@ -296,18 +481,7 @@ namespace HourglassPass {
 			}
 		}
 		/// <summary>
-		///  Returns a letter with a randomized garbage character, if currently using one.
-		/// </summary>
-		/// <returns>The randomized letter.</returns>
-		public Letter Randomized() {
-			if (garbage) {
-				if (IsGarbageChar(character))
-					return new Letter(Garbage[random.Next(Garbage.Length)], true);
-			}
-			return this;
-		}
-		/// <summary>
-		///  Randomized the letter's garbage character, if currently using one.
+		///  Randomizes the letter's garbage character, if currently using one.
 		/// </summary>
 		public void Randomize() {
 			if (garbage) {
@@ -315,105 +489,6 @@ namespace HourglassPass {
 					character = Garbage[random.Next(Garbage.Length)];
 			}
 		}
-
-		#endregion
-
-		#region Object Overrides
-
-		/// <summary>
-		///  Gets the string representation of the letter.
-		/// </summary>
-		/// <returns>The string representation of the letter.</returns>
-		public override string ToString() => new string(Character, 1);
-		/*/// <summary>
-		///  Gets the string representation of the letter in binary.
-		/// </summary>
-		/// <returns>The binary string representation of the letter.</returns>
-		public string ToBinString() => Convert.ToString(Value, 2).PadLeft(4, '0');
-		/// <summary>
-		///  Gets the string representation of the letter in hexidecimal.
-		/// </summary>
-		/// <returns>The hexidecimal string representation of the letter.</returns>
-		public string ToHexString() => Convert.ToString(Value, 16).ToUpper();*/
-
-		/// <summary>
-		///  Gets the string representation of the letter with the specified formatting.
-		/// </summary>
-		/// <param name="format">
-		///  The format to display the letter in.<para/>
-		///  S/empty = String, B = Binary, D/N = Decimal, X = Hexidecimal.
-		/// </param>
-		/// <returns>The formatted string representation of the letter.</returns>
-		public string ToString(string format) => ToString(format, CultureInfo.CurrentCulture);
-		/// <summary>
-		///  Gets the string representation of the letter with the specified formatting.
-		/// </summary>
-		/// <param name="format">
-		///  The format to display the letter in.<para/>
-		///  S/empty = String, B = Binary, D/N = Decimal, X = Hexidecimal.
-		/// </param>
-		/// <param name="formatProvider">Unused.</param>
-		/// <returns>The formatted string representation of the letter.</returns>
-		public string ToString(string format, IFormatProvider formatProvider) {
-			if (format == null)
-				return ToString();
-			switch (format) {
-			case "":
-			case "S": return ToString();
-			case "B": return Convert.ToString(Value, 2).PadLeft(4, '0');
-			case "X": return Convert.ToString(Value, 16).ToUpper();
-			case "N": // We can't get large enough to use commas, ignore.
-			case "D": return Value.ToString();
-			}
-			throw new FormatException($"Invalid Letter format \"{format}\"!");
-		}
-
-		/// <summary>
-		///  Gets the hash code for the letter's value.
-		/// </summary>
-		/// <returns>The letter's value.</returns>
-		public override int GetHashCode() => Value;
-
-		/// <summary>
-		///  Checks if the object is a <see cref="Letter"/>, <see cref="char"/>, or <see cref="int"/> and compares the
-		///  values of the letters.
-		/// </summary>
-		/// <param name="obj">The object to check for equality with.</param>
-		/// <returns>The object is a compatible type and has the same value as this letter.</returns>
-		public override bool Equals(object obj) {
-			if (obj is Letter l) return Equals(l);
-			if (obj is char c) return Equals(c);
-			if (obj is int i) return Equals(i);
-			return false;
-		}
-		/// <summary>
-		///  Compares the values of the letters.
-		/// </summary>
-		/// <param name="other">The letter to check for equality with.</param>
-		/// <returns>The letter has the same value as this letter.</returns>
-		public bool Equals(Letter other) => Value == other.Value;
-		/// <summary>
-		///  Compares the value of the letter to that of the character.
-		/// </summary>
-		/// <param name="other">The character to check for equality with values.</param>
-		/// <returns>The character has the same value as this letter.</returns>
-		public bool Equals(char other) => Value == GetValueOfChar(other);
-		/// <summary>
-		///  Compares the value with that of this letter.
-		/// </summary>
-		/// <param name="other">The value to check for equality with.</param>
-		/// <returns>The value haiss the same as this letter's value.</returns>
-		public bool Equals(int other) => Value == other;
-
-		public int CompareTo(object obj) {
-			if (obj is Letter l) return CompareTo(l);
-			if (obj is char c) return CompareTo(c);
-			if (obj is int i) return CompareTo(i);
-			throw new ArgumentException($"Letter cannot be compared against type {obj.GetType().Name}!");
-		}
-		public int CompareTo(Letter other) => Value.CompareTo(other.Value);
-		public int CompareTo(char other) => Value.CompareTo(GetValueOfChar(other));
-		public int CompareTo(int other) => Value.CompareTo(other);
 
 		#endregion
 
@@ -442,6 +517,41 @@ namespace HourglassPass {
 
 		#region Helpers
 
+		/// <summary>
+		///  Returns true if the string is a valid letter string.
+		/// </summary>
+		/// <param name="s">The string to validate.</param>
+		/// <returns>True if the string is a valid letter string.</returns>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool IsValidString(string s) {
+			if (s == null)
+				throw new ArgumentNullException(nameof(s));
+			for (int i = 0; i < s.Length; i++) {
+				char c = s[i];
+				if (!IsValidChar(c))
+					return false;
+			}
+			return true;
+		}
+		/// <summary>
+		///  Returns true if the string is a valid letter string with the correct length.
+		/// </summary>
+		/// <param name="s">The string to validate.</param>
+		/// <param name="length">The length to check for.</param>
+		/// <returns>True if the string is a valid letter string with the correct length.</returns>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool IsValidString(string s, int length) {
+			if (s == null)
+				throw new ArgumentNullException(nameof(s));
+			if (s.Length != length)
+				return false;
+			for (int i = 0; i < length; i++) {
+				char c = s[i];
+				if (!IsValidChar(c))
+					return false;
+			}
+			return true;
+		}
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static void ValidateChar(ref char c, string paramName) {
 			c = char.ToUpper(c);
@@ -456,13 +566,19 @@ namespace HourglassPass {
 					$"Letter value must be between {MinValue} and {MaxValue}, got {v}!");
 		}
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static bool IsValidChar(ref char c) {
+		public static bool IsValidChar(char c) {
 			c = char.ToUpper(c);
 			return (c >= MinChar && c <= MaxChar);
 		}
+		/*[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool IsValidChar(ref char c) {
+			c = char.ToUpper(c);
+			return (c >= MinChar && c <= MaxChar);
+		}*/
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int GetValueOfChar(char c) {
-			if (IsValidChar(ref c))
+			c = char.ToUpper(c);
+			if (IsValidChar(c))
 				// If outside of valid array, must be garbage letter, which evaluates to zero.
 				return Math.Max(0, Array.IndexOf(Valid, c));
 			return -1;

@@ -20,7 +20,7 @@ namespace HourglassPass.Generator.Converters {
 			else if (value is string s && Password.IsValidString(s))
 				p = new Password(s);
 			
-			return p?.Normalized().ToString() ?? PasswordTextBox3.InvalidText;
+			return p?.ToString("PN") ?? PasswordTextBox3.InvalidText;
 		}
 
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {

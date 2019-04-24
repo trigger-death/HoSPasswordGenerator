@@ -49,6 +49,8 @@
     <Compile Include="FlagOperation.cs" />
     <Compile Include="GameData\FlagInfo.cs" />
     <Compile Include="GameData\TitleChapter.cs" />
+    <Compile Include="Internal\LetterUtils.cs" />
+    <Compile Include="ILetterString.cs" />
     <Compile Include="Letter.cs" />
     <Compile Include="Password.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

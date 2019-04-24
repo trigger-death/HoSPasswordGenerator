@@ -9,7 +9,7 @@ namespace HourglassPass.GameData {
 	/// <summary>
 	///  A ID pair that refers to a DVD's Title-Chapter combination.
 	/// </summary>
-	public struct TitleChapter {
+	public struct TitleChapter : IEquatable<TitleChapter>, IComparable, IComparable<TitleChapter> {
 		#region Constants
 
 		/// <summary>
@@ -20,6 +20,11 @@ namespace HourglassPass.GameData {
 		///  The maximum allowed value for titles and chapters.
 		/// </summary>
 		public const int MaxValue = 999;
+
+		/// <summary>
+		///  The regex used to parse Title-Chapter pairs.
+		/// </summary>
+		private static readonly Regex ParseRegex = new Regex(@"^(?'t'\d+)-(?'c'\d+)$");
 
 		#endregion
 
@@ -58,6 +63,10 @@ namespace HourglassPass.GameData {
 				chapter = (short) value;
 			}
 		}
+		/// <summary>
+		///  Gets the integer value of the combined title and chapter.
+		/// </summary>
+		internal int Value => (title << 16) | (int) chapter;
 
 		#endregion
 
@@ -81,21 +90,127 @@ namespace HourglassPass.GameData {
 		}
 
 		#endregion
-
-
+		
 		#region Object Overrides
 
+		/// <summary>
+		///  Gets the string representation of the Title-Chapter.
+		/// </summary>
+		/// <returns>The string representation of the Title-Chapter.</returns>
 		public override string ToString() => $"{Title}-{Chapter}";
 
-		public static TitleChapter Parse(string s) {
-			Match match = Regex.Match(s, @"(?'t'\d+)-(?'c'\d+)");
-			if (!match.Success)
-				throw new FormatException($"Title Chapter must be formatted as \"Title-Chapter\", got \"{s}\"!");
+		/// <summary>
+		///  Gets the hash code as the Title-Chapter.
+		/// </summary>
+		/// <returns>The Title-Chapter's hash code.</returns>
+		public override int GetHashCode() => Value;
 
-			return new TitleChapter(
-				int.Parse(match.Groups["t"].Value),
-				int.Parse(match.Groups["c"].Value));
+		/// <summary>
+		///  Checks if the object is a <see cref="TitleChapter"/> and checks for equality between the Title-Chapters.
+		/// </summary>
+		/// <param name="obj">The object to check for equality with.</param>
+		/// <returns>The object is a Title-Chapter and has the same title and chapter values.</returns>
+		public override bool Equals(object obj) {
+			if (obj is TitleChapter tc) return Equals(tc);
+			return false;
 		}
+		/// <summary>
+		///  Checks for equality between the Title-Chapters.
+		/// </summary>
+		/// <param name="other">The Title-Chapter to check for equality with.</param>
+		/// <returns>The Title-Chapters are the same.</returns>
+		public bool Equals(TitleChapter other) => title == other.title && chapter == other.chapter;
+
+		/// <summary>
+		///  Checks if the object is a <see cref="TitleChapter"/> and compares it to this Title-Chapter.
+		/// </summary>
+		/// <param name="obj">The object to compare with.</param>
+		/// <returns>The comparison between the object and the Title-Chapter.</returns>
+		/// 
+		/// <exception cref="ArgumentNullException">
+		///  <paramref name="obj"/> is null.
+		/// </exception>
+		/// <exception cref="ArgumentException">
+		///  <paramref name="obj"/> is not a <see cref="TitleChapter"/>.
+		/// </exception>
+		public int CompareTo(object obj) {
+			if (obj is TitleChapter tc) return CompareTo(tc);
+			if (obj is null)
+				throw new ArgumentNullException(nameof(obj));
+			throw new ArgumentException($"Title-Chapter cannot be compared against type {obj.GetType().Name}!");
+		}
+		/// <summary>
+		///  Compares the two Title-Chapters.
+		/// </summary>
+		/// <param name="obj">The Title-Chapter to compare with.</param>
+		/// <returns>The between the Title-Chapters.</returns>
+		public int CompareTo(TitleChapter other) => Value.CompareTo(other.Value);
+
+		#endregion
+
+		#region Parse
+
+		/// <summary>
+		///  Parses the string representation of the Title-Chapter. Must be in format #-#.
+		/// </summary>
+		/// <param name="s">The string representation of the Title-Chapter.</param>
+		/// <returns>The parsed Title-Chapter.</returns>
+		/// 
+		/// <exception cref="ArgumentNullException">
+		///  <paramref name="s"/> is null.
+		/// </exception>
+		/// <exception cref="FormatException">
+		///  <paramref name="s"/> is not of format "#-#".
+		/// </exception>
+		/// <exception cref="ArgumentOutOfRangeException">
+		///  Title or chapter is less than <see cref="MinValue"/> or greater than <see cref="MaxValue"/>.
+		/// </exception>
+		public static TitleChapter Parse(string s) {
+			if (s == null)
+				throw new ArgumentNullException(nameof(s));
+
+			Match match = ParseRegex.Match(s);
+			if (!match.Success)
+				throw new FormatException($"Title-Chapter must be formatted as \"Title-Chapter\", got \"{s}\"!");
+
+			return new TitleChapter(int.Parse(match.Groups["t"].Value), int.Parse(match.Groups["c"].Value));
+		}
+		/// <summary>
+		///  Tries to parse the string representation of the Title-Chapter.
+		/// </summary>
+		/// <param name="s">The string representation of the Title-Chapter.</param>
+		/// <param name="titleChapter">The output parsed Title-Chapter.</param>
+		/// <returns>True if the parse was successful, otherwise false.</returns>
+		public static bool TryParse(string s, out TitleChapter titleChapter) {
+			titleChapter = new TitleChapter();
+			if (s == null)
+				return false;
+
+			Match match = ParseRegex.Match(s);
+			if (!match.Success)
+				return false;
+
+			if (!int.TryParse(match.Groups["t"].Value, out int t) || !IsValidValue(t))
+				return false;
+			if (!int.TryParse(match.Groups["c"].Value, out int c) || !IsValidValue(c))
+				return false;
+
+			titleChapter = new TitleChapter(t, c);
+			return true;
+		}
+
+		#endregion
+
+		#region Comparison Operators
+		
+		public static bool operator ==(TitleChapter a, TitleChapter b) => a.Equals(b);
+		public static bool operator !=(TitleChapter a, TitleChapter b) => !a.Equals(b);
+
+		public static bool operator <(TitleChapter a, TitleChapter b) => a.CompareTo(b) < 0;
+		public static bool operator >(TitleChapter a, TitleChapter b) => a.CompareTo(b) > 0;
+
+		public static bool operator <=(TitleChapter a, TitleChapter b) => a.CompareTo(b) <= 0;
+		public static bool operator >=(TitleChapter a, TitleChapter b) => a.CompareTo(b) >= 0;
 
 		#endregion
 
@@ -112,6 +227,10 @@ namespace HourglassPass.GameData {
 			if (c < MinValue || c > MaxValue)
 				throw new ArgumentOutOfRangeException(paramName, c,
 					$"Chapter must be between {MinValue} and {MaxValue}, got {c}!");
+		}
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private static bool IsValidValue(int v) {
+			return (v >= MinValue && v <= MaxValue);
 		}
 
 		#endregion

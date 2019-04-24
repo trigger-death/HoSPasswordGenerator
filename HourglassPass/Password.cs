@@ -1,17 +1,18 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
+using HourglassPass.Internal;
 
 namespace HourglassPass {
 	/// <summary>
 	///  A password structure containing both a Scene ID and Flag Data.
 	/// </summary>
 	[Serializable]
-	public sealed class Password : IEquatable<Password>, IEquatable<string>, IEquatable<int>,
-		IEnumerable<Letter>
-	{
+	public sealed class Password : IEquatable<Password>, ILetterString {
 		#region Constants
 
 		/// <summary>
@@ -36,6 +37,14 @@ namespace HourglassPass {
 		///  The number of letters in this password structure.
 		/// </summary>
 		public const int Length = SceneId.Length + FlagData.Length;
+
+		#region ILetterString Constants
+
+		int ILetterString.MinValue => Length;
+		int ILetterString.MaxValue => Length;
+		int IReadOnlyCollection<Letter>.Count => Length;
+
+		#endregion
 
 		#endregion
 
@@ -197,17 +206,166 @@ namespace HourglassPass {
 			}
 		}
 
-		public string NormalizedString {
-			get => $"{Scene.Normalized()}{Flags.Normalized()}";
+		#endregion
+
+		#region Object Overrides
+
+		/// <summary>
+		///  Gets the string representation of the Password.
+		/// </summary>
+		/// <returns>The string representation of the Password.</returns>
+		public override string ToString() => String;
+
+		/// <summary>
+		///  Gets the string representation of the Password with the specified formatting.
+		/// </summary>
+		/// <param name="format">
+		///  The format to display the letter string in.<para/>
+		///  Password: P(Format)[spacing]. Format: S/s = Default, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.<para/>
+		///  Binary: VB[spacing] = Binary value format.<para/>
+		///  Value: V[format] = Integer value format.
+		/// </param>
+		/// <returns>The formatted string representation of the Password.</returns>
+		/// 
+		/// <exception cref="FormatException">
+		///  <paramref name="format"/> is invalid.
+		/// </exception>
+		public string ToString(string format) => ToString(format, CultureInfo.CurrentCulture);
+		/// <summary>
+		///  Gets the string representation of the Password with the specified formatting.
+		/// </summary>
+		/// <param name="format">
+		///  The format to display the letter string in.<para/>
+		///  Password: P(Format)[spacing]. Format: S/s = Default, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.<para/>
+		///  Binary: VB[spacing] = Binary value format.<para/>
+		///  Value: V[format] = Integer value format.
+		/// </param>
+		/// <param name="formatProvider">Unused.</param>
+		/// <returns>The formatted string representation of the Password.</returns>
+		/// 
+		/// <exception cref="FormatException">
+		///  <paramref name="format"/> is invalid.
+		/// </exception>
+		public string ToString(string format, IFormatProvider formatProvider) {
+			return this.Format(format, formatProvider, "Password");
 		}
-		public string RandomizedString {
-			get => $"{Scene.Randomized()}{Flags.Randomized()}";
-		}
+
+		/// <summary>
+		///  Gets the hash code as the Passwords's value.
+		/// </summary>
+		/// <returns>The Passwords's value.</returns>
+		//public override int GetHashCode() => Value;
+
+		/// <summary>
+		///  Checks if the object is a <see cref="SceneId"/>, <see cref="Letter[]"/>, <see cref="string"/>, or
+		///  <see cref="int"/> and Checks for equality between the values of the letter strings.
+		/// </summary>
+		/// <param name="obj">The object to check for equality with.</param>
+		/// <returns>The object is a compatible type and has the same value as this letter string.</returns>
+		/*public override bool Equals(object obj) {
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj is Password pw) return Equals(pw);
+			if (obj is Letter[] l) return Equals(l);
+			if (obj is string s) return Equals(s);
+			if (obj is int i) return Equals(i);
+			return false;
+		}*/
+		/// <summary>
+		///  Checks for equality between the values of the letter strings.
+		/// </summary>
+		/// <param name="other">The letter string to check for equality with.</param>
+		/// <returns>The letter string has the same value as this letter string.</returns>
+		public bool Equals(Password other) => other != null && Scene.Equals(other.Scene) && Flags.Equals(other.Flags);
+		/// <summary>
+		///  Checks for equality between the value of the letter string and that of the letter array.
+		/// </summary>
+		/// <param name="other">The letter array to check for equality with values.</param>
+		/// <returns>The letter array has the same value as this letter string.</returns>
+		public bool Equals(Letter[] other) => other != null && Equals(new Password(other));
+		/// <summary>
+		///  Checks for equality between the value of the letter string and that of the string.
+		/// </summary>
+		/// <param name="other">The string to check for equality with values.</param>
+		/// <returns>The string has the same value as this letter string.</returns>
+		public bool Equals(string other) => other != null && Equals(new Password(other));
+		/// <summary>
+		///  Compares the value with that of this letter string.
+		/// </summary>
+		/// <param name="other">The value to check for equality with.</param>
+		/// <returns>The value is the same as this letter string's value.</returns>
+		public bool Equals(int other) => Value == other;
 
 		#endregion
 
 		#region Parse
 
+		/// <summary>
+		///  Parses the string representation of the Password.
+		/// </summary>
+		/// <param name="s">The string representation of the Password.</param>
+		/// <returns>The parsed Password.</returns>
+		/// 
+		/// <exception cref="ArgumentNullException">
+		///  <paramref name="s"/> is null.
+		/// </exception>
+		/// <exception cref="ArgumentException">
+		///  <paramref name="s"/> is not a valid Password.
+		/// </exception>
+		public static Password Parse(string s) {
+			return Parse(s, PasswordStyles.Password);
+		}
+		/// <summary>
+		///  Parses the string representation of the Password.
+		/// </summary>
+		/// <param name="s">The string representation of the Password.</param>
+		/// <param name="style">The style to parse the Password in.</param>
+		/// <returns>The parsed Password.</returns>
+		/// 
+		/// <exception cref="ArgumentNullException">
+		///  <paramref name="s"/> is null.
+		/// </exception>
+		/// <exception cref="ArgumentException">
+		///  <paramref name="s"/> is not a valid Password.-or-<paramref name="style"/> is not a valid
+		///  <see cref="PasswordStyles"/>.
+		/// </exception>
+		public static Password Parse(string s, PasswordStyles style) {
+			Letter[] letters = LetterUtils.ParseLetterString(s, style, "Password", Length);
+			return new Password(letters);
+		}
+
+		/// <summary>
+		///  Tries to parse the string representation of the Password.
+		/// </summary>
+		/// <param name="s">The string representation of the Password.</param>
+		/// <param name="password">The output Password on success.</param>
+		/// <returns>True if the Password was successfully parsed, otherwise false.</returns>
+		public static bool TryParse(string s, out Password password) {
+			return TryParse(s, PasswordStyles.Password, out password);
+		}
+		/// <summary>
+		///  Tries to parse the string representation of the Password.
+		/// </summary>
+		/// <param name="s">The string representation of the Password.</param>
+		/// <param name="style">The style to parse the Password in.</param>
+		/// <param name="password">The output Password on success.</param>
+		/// <returns>True if the Password was successfully parsed, otherwise false.</returns>
+		public static bool TryParse(string s, PasswordStyles style, out Password password) {
+			if (LetterUtils.TryParseLetterString(s, style, "Password", Length, out Letter[] letters)) {
+				password = new Password(letters);
+				return true;
+			}
+			password = null;
+			return false;
+		}
+
+		#endregion
+
+		/*#region Parse
+
+		public static Password Parse(string s) {
+			return new Password(s);
+		}
+		
 		public static bool TryParse(string s, out Password password) {
 			if (IsValidString(s)) {
 				password = new Password(s);
@@ -217,25 +375,47 @@ namespace HourglassPass {
 			return false;
 		}
 
-		#endregion
+		#endregion*/
 
-		#region Object Overrides
+		#region ILetterString Mutate
 
-		public override string ToString() => String;
-
-		public override int GetHashCode() => Value;
-
-		public override bool Equals(object obj) {
-			if (obj is Password pw) return Equals(pw);
-			if (obj is Letter[] l) return Equals(l);
-			if (obj is string s) return Equals(s);
-			if (obj is int i) return Equals(i);
-			return false;
+		/// <summary>
+		///  Returns a Password with normalized interchangeable characters.
+		/// </summary>
+		/// <param name="garbageChar">The character to use for garbage letters.</param>
+		/// <returns>The normalized Password with consistent interchangeable characters.</returns>
+		public Password Normalized(char garbageChar = Letter.GarbageChar) {
+			Password pw = new Password(this);
+			pw.Normalize(garbageChar);
+			return pw;
 		}
-		public bool Equals(Password other) => other != null && Scene.Equals(other.Scene) && Flags.Equals(other.Flags);
-		public bool Equals(Letter[] other) => other != null && Equals(new Password(other));
-		public bool Equals(string other) => other != null && Equals(new Password(other));
-		public bool Equals(int other) => Value == other;
+		/// <summary>
+		///  Returns a Password with randomized interchangeable characters.
+		/// </summary>
+		/// <returns>The randomized Password with random interchangable characters.</returns>
+		public Password Randomized() {
+			Password pw = new Password(this);
+			pw.Randomize();
+			return pw;
+		}
+		ILetterString ILetterString.Normalized(char garbageChar) => Normalized(garbageChar);
+		ILetterString ILetterString.Randomized() => Randomized();
+
+		/// <summary>
+		///  Normalizes the Password's interchangeable characters.
+		/// </summary>
+		/// <param name="garbageChar">The character to use for garbage letters.</param>
+		public void Normalize(char garbageChar = Letter.GarbageChar) {
+			Scene.Normalize(garbageChar);
+			Flags.Normalize(garbageChar);
+		}
+		/// <summary>
+		///  Randomizes the Password's interchangeable characters.
+		/// </summary>
+		public void Randomize() {
+			Scene.Randomize();
+			Flags.Randomize();
+		}
 
 		#endregion
 
@@ -252,12 +432,20 @@ namespace HourglassPass {
 
 		#region Comparison Operators
 
-		public static bool operator ==(Password a, Password b) {
-			return (!(a is null) ? (!(b is null) ? a.Equals(b) : false) : (b is null));
+		/*public static bool operator ==(Password a, Password b) {
+			if (a is null)
+				return (b is null);
+			else if (b is null)
+				return false;
+			return a.Equals(b);
 		}
 		public static bool operator !=(Password a, Password b) {
-			return (!(a is null) ? (!(b is null) ? !a.Equals(b) : true) : !(b is null));
-		}
+			if (a is null)
+				return !(b is null);
+			else if (b is null)
+				return true;
+			return !a.Equals(b);
+		}*/
 
 		#endregion
 
@@ -271,44 +459,16 @@ namespace HourglassPass {
 
 		#endregion
 
-		#region Utilities
-		
-		public void Normalize(char garbageChar = Letter.GarbageChar) {
-			Scene.Normalize(garbageChar);
-			Flags.Normalize(garbageChar);
-		}
-		public Password Normalized(char garbageChar = Letter.GarbageChar) {
-			Password pw = new Password(this);
-			pw.Normalize(garbageChar);
-			return pw;
-		}
-		public void Randomize() {
-			Scene.Randomize();
-			Flags.Randomize();
-		}
-		public Password Randomized() {
-			Password pw = new Password(this);
-			pw.Randomize();
-			return pw;
-		}
-
-		#endregion
-
 		#region Helpers
 
+		/// <summary>
+		///  Returns true if the string is a valid Password letter string.
+		/// </summary>
+		/// <param name="s">The string to validate.</param>
+		/// <returns>True if the string is a valid Password letter string.</returns>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static bool IsValidString(string s) {
-			if (s == null)
-				throw new ArgumentNullException(nameof(s));
-			if (s.Length != Length)
-				return false;
-			for (int i = 0; i < Length; i++) {
-				char c = s[i];
-				if (!Letter.IsValidChar(ref c))
-					return false;
-			}
-			return true;
-		}
+		public static bool IsValidString(string s) => Letter.IsValidString(s, Length);
+
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static void ValidateLetters(Letter[] letters, string paramName) {
 			if (letters == null)

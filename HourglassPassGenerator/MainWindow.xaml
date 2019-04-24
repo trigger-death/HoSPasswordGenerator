@@ -74,13 +74,13 @@
       <TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding ElementName=passTextBox, Path=Text, Converter={conv:PasswordConverter}}" FontFamily="Consolas" VerticalAlignment="Center" Padding="5" FontSize="14"/>
 
       <Label Grid.Column="0" Grid.Row="2" Content="Normalized:" Padding="4" VerticalAlignment="Center" HorizontalAlignment="Right"/>
-      <TextBlock Grid.Column="2" Grid.Row="2" Text="{Binding ElementName=passTextBox, Path=Text, Converter={conv:PasswordNormalizeConverter}}" FontFamily="Consolas" VerticalAlignment="Center" Padding="5" FontSize="14"/>
+      <TextBlock Grid.Column="2" Grid.Row="2" Text="{Binding ElementName=passTextBox, Path=Password, Converter={conv:PasswordNormalizeConverter}}" FontFamily="Consolas" VerticalAlignment="Center" Padding="5" FontSize="14"/>
       
       <Label Grid.Column="0" Grid.Row="3" Content="Scene ID:" Padding="4" VerticalAlignment="Top" HorizontalAlignment="Right"/>
-      <TextBlock Grid.Column="2" Grid.Row="3" Text="{Binding ElementName=passTextBox, Path=Text, Converter={conv:PasswordSceneConverter}}" VerticalAlignment="Center" Padding="4"/>
+      <TextBlock Grid.Column="2" Grid.Row="3" Text="{Binding ElementName=passTextBox, Path=Password, Converter={conv:PasswordSceneConverter}}" VerticalAlignment="Center" Padding="4"/>
 
       <Label Grid.Column="0" Grid.Row="4" Content="Flag Data:" Padding="4" VerticalAlignment="Top" HorizontalAlignment="Right"/>
-      <TextBlock Grid.Column="2" Grid.Row="4" Text="{Binding ElementName=passTextBox, Path=Text, Converter={conv:PasswordFlagsConverter}}" FontFamily="Lucida Console" VerticalAlignment="Center" Padding="5"/>
+      <TextBlock Grid.Column="2" Grid.Row="4" Text="{Binding ElementName=passTextBox, Path=Password, Converter={conv:PasswordFlagsConverter}}" FontFamily="Lucida Console" VerticalAlignment="Center" Padding="5"/>
 
 
     </Grid>

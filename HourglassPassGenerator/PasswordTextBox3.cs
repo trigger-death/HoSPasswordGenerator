@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -11,7 +12,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 
 namespace HourglassPass.Generator {
-	public sealed class PasswordTextBox3 : TextBox {
+	public sealed class PasswordTextBox3 : TextBox, INotifyPropertyChanged {
 		#region Constants
 
 		//private const string InvalidText = "--------";
@@ -23,9 +24,9 @@ namespace HourglassPass.Generator {
 
 		#region Dependency Properties
 
-		private static readonly DependencyPropertyKey PasswordPropertyKey =
+		/*private static readonly DependencyPropertyKey PasswordPropertyKey =
 			DependencyProperty.RegisterReadOnly("Password", typeof(Password), typeof(PasswordTextBox2),
-				new FrameworkPropertyMetadata(null));
+				new FrameworkPropertyMetadata(null));*/
 
 		private static readonly DependencyPropertyKey IsValidPasswordPropertyKey =
 			DependencyProperty.RegisterReadOnly("IsValidPassword", typeof(bool), typeof(PasswordTextBox3),
@@ -42,7 +43,7 @@ namespace HourglassPass.Generator {
 			DependencyProperty.Register("InvalidBackground", typeof(Brush), typeof(PasswordTextBox2),
 				new FrameworkPropertyMetadata(Brushes.White));
 
-		public static readonly DependencyProperty PasswordProperty = PasswordPropertyKey.DependencyProperty;
+		//public static readonly DependencyProperty PasswordProperty = PasswordPropertyKey.DependencyProperty;
 		public static readonly DependencyProperty IsValidPasswordProperty = IsValidPasswordPropertyKey.DependencyProperty;
 		public static readonly DependencyProperty NormalizedTextProperty = NormalizedTextPropertyKey.DependencyProperty;
 
@@ -57,10 +58,24 @@ namespace HourglassPass.Generator {
 			set => SetValue(InvalidBackgroundProperty, value);
 		}
 
+
+		private Password password = null;// new Password("ZZZZZYYY");
 		[Category("Hourglass")]
 		public Password Password {
-			get => (Password) GetValue(PasswordProperty);
-			private set => SetValue(PasswordPropertyKey, value);
+			get {
+				return password;
+				//Password.TryParse(Text, out Password password);
+				//return password ?? new Password("XXXXXXXX");
+			}
+			private set {
+				//value = value ?? new Password("XXXXXXXX");
+				if (password?.String != value?.String) {
+					password = value;
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Password)));
+				}
+			}
+			//get => (Password) GetValue(PasswordProperty);
+			//private set => SetValue(PasswordPropertyKey, value);
 		}
 		[Category("Hourglass")]
 		public bool IsValidPassword {
@@ -88,14 +103,10 @@ namespace HourglassPass.Generator {
 			else {
 				textBox.NormalizedText = InvalidText;
 			}
-			Console.WriteLine($"1: {(textBox.Password == p)}");
-			if (textBox.Password != null) {
-				Console.WriteLine($"2: {textBox.Password.Equals(p)}");
-			}
-			else if (p != null) {
-				Console.WriteLine($"3: {p.Equals(textBox.Password)}");
-			}
-			textBox.Password = p;
+			//textBox.Password = p;
+			//if (textBox.Password?.String != p?.String)
+				textBox.Password = p;
+			//	textBox.PropertyChanged?.Invoke(textBox, new PropertyChangedEventArgs(nameof(Password)));
 			textBox.IsValidPassword = p != null;
 		}
 		protected override void OnTextChanged(TextChangedEventArgs e) {
@@ -104,18 +115,30 @@ namespace HourglassPass.Generator {
 		}
 		private void UpdateText() {
 			int realLength = RealLength;
-			if (Text.Length < Password.Length || (realLength < Text.Length && Text.Length > Password.Length)) {
-				int start = SelectionStart;
-				int length = SelectionLength;
+			int start = SelectionStart;
+			int length = SelectionLength;
+			if (Text.Length < Password.Length || (realLength < Text.Length && Text.Length > Password.Length) || Text.Length > Password.Length) {
+				//int start = SelectionStart;
+				//int length = SelectionLength;
 				Text = Text.Substring(0, realLength) + new string(Bullet, Math.Max(0, Password.Length - realLength));
+				//Text = Text.Substring(0, Math.Min(Password.Length, realLength)) + new string(Bullet, Math.Max(0, Password.Length - realLength));
 				UpdateSelection(start, length, true);
 			}
+			//UpdateSelection(start, length, true);
 		}
 		private void UpdateSelection() {
 			UpdateSelection(SelectionStart, SelectionLength);
 		}
 		private void UpdateSelection(int start, int length, bool force = false) {
 			int realLength = RealLength;
+			/*int s = Math.Min(Math.Max(0, realLength - 1), start);
+			int l = Math.Min(realLength, 1);
+			if (s != start || l != length)
+				Select(s, l);*/
+			/*if (start >= realLength)
+				Select(Math.Max(0, realLength - 1), Math.Min(realLength, 1));
+			else
+				Select(Math.Min(Math.Max(0, realLength - 1), start), Math.Min(realLength, 1));*/
 			if (realLength != Text.Length) {
 				if (start > realLength) {
 					Select(realLength, 0);
@@ -131,12 +154,23 @@ namespace HourglassPass.Generator {
 				Select(start, length);
 			}
 		}
+		
+		private void ForceInsertMode() {
+			// Fetch TextEditor
+			PropertyInfo textEditorProperty = typeof(TextBox).GetProperty("TextEditor", BindingFlags.NonPublic | BindingFlags.Instance);
+			object textEditor = textEditorProperty.GetValue(this, null);
+
+			// Set _OvertypeMode on the TextEditor
+			PropertyInfo overtypeModeProperty = textEditor.GetType().GetProperty("_OvertypeMode", BindingFlags.NonPublic | BindingFlags.Instance);
+			overtypeModeProperty.SetValue(textEditor, true, null);
+		}
 		protected override void OnPreviewKeyDown(KeyEventArgs e) {
 			base.OnPreviewKeyDown(e);
 			// Prevent space, beacuse it's not triggered by OnPreviewTextInput
-			e.Handled = (e.Key == Key.Space || e.Key == Key.Tab);
+			e.Handled = (e.Key == Key.Space || e.Key == Key.Tab);// || e.Key == Key.Back || e.Key == Key.Delete);
 		}
 		protected override void OnPreviewTextInput(TextCompositionEventArgs e) {
+			ForceInsertMode();
 			base.OnPreviewTextInput(e);
 			e.Handled = !IsTextAllowed(e.Text);
 		}
@@ -144,6 +178,7 @@ namespace HourglassPass.Generator {
 			return Regex.IsMatch(s, @"^[A-Za-z]*$");
 		}
 		private void PastingHandler(object sender, DataObjectPastingEventArgs e) {
+			ForceInsertMode();
 			if (e.DataObject.GetDataPresent(typeof(string))) {
 				string text = (string) e.DataObject.GetData(typeof(string));
 				if (!IsTextAllowed(text)) e.CancelCommand();
@@ -181,7 +216,10 @@ namespace HourglassPass.Generator {
 
 		public PasswordTextBox3() {
 			DataObject.AddPastingHandler(this, PastingHandler);
+			//MaxLength = 8;
 		}
+
+		public event PropertyChangedEventHandler PropertyChanged;
 		// Use the DataObject.Pasting Handler  
 		#endregion
 

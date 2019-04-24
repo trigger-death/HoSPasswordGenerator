@@ -5,15 +5,14 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
+using HourglassPass.Internal;
 
 namespace HourglassPass {
 	/// <summary>
 	///  Password data for in-game flags.
 	/// </summary>
 	[Serializable]
-	public sealed class FlagData : IEquatable<FlagData>, IEquatable<string>, IEquatable<int>,
-		IFormattable, IEnumerable<Letter>
-	{
+	public sealed class FlagData : IEquatable<FlagData>, ILetterString {
 		#region Constants
 
 		/// <summary>
@@ -28,6 +27,14 @@ namespace HourglassPass {
 		///  The number of letters in this password structure.
 		/// </summary>
 		public const int Length = 5;
+
+		#region ILetterString Constants
+
+		int ILetterString.MinValue => Length;
+		int ILetterString.MaxValue => Length;
+		int IReadOnlyCollection<Letter>.Count => Length;
+
+		#endregion
 
 		#endregion
 
@@ -173,7 +180,7 @@ namespace HourglassPass {
 				int v = 0;
 				// Values are refersed that they print nicely in hex
 				for (int i = 0; i < Length; i++)
-					v |= letters[Length - i - 1].Value << (i * 4);
+					v |= letters[i].Value << (i * 4);
 				return v;
 			}
 			set {
@@ -196,103 +203,142 @@ namespace HourglassPass {
 		///  Gets the string representation of the Flag Data with the specified formatting.
 		/// </summary>
 		/// <param name="format">
-		///  The format to display the Flag Data in.<para/>
-		///  S/empty = String, B = Binary, D/N = Decimal, X = Hexidecimal.
-		///  # = spacing between values. Default = 0.
+		///  The format to display the letter string in.<para/>
+		///  Password: P(Format)[spacing]. Format: S/s = Default, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.<para/>
+		///  Binary: VB[spacing] = Binary value format.<para/>
+		///  Value: V[format] = Integer value format.
 		/// </param>
 		/// <returns>The formatted string representation of the Flag Data.</returns>
+		/// 
+		/// <exception cref="FormatException">
+		///  <paramref name="format"/> is invalid.
+		/// </exception>
 		public string ToString(string format) => ToString(format, CultureInfo.CurrentCulture);
 		/// <summary>
 		///  Gets the string representation of the Flag Data with the specified formatting.
 		/// </summary>
 		/// <param name="format">
-		///  The format to display the Flag Data in.<para/>
-		///  S/empty = String, B = Binary, D/N = Decimal, X = Hexidecimal.
-		///  # = spacing between values. Default = 0.
+		///  The format to display the letter string in.<para/>
+		///  Password: P(Format)[spacing]. Format: S/s = Default, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.<para/>
+		///  Binary: VB[spacing] = Binary value format.<para/>
+		///  Value: V[format] = Integer value format.
 		/// </param>
 		/// <param name="formatProvider">Unused.</param>
 		/// <returns>The formatted string representation of the Flag Data.</returns>
+		/// 
+		/// <exception cref="FormatException">
+		///  <paramref name="format"/> is invalid.
+		/// </exception>
 		public string ToString(string format, IFormatProvider formatProvider) {
-			if (format == null)
-				return ToString();
-			Match match = Regex.Match(format, @"^(?'letter'[BDNSX])?(?'space'\d+)?$");
-			if (!match.Success)
-				throw new FormatException($"Invalid Flag Data format \"{format}\"!");
-			int space = 0;
-			if (match.Groups["space"].Success)
-				space = int.Parse(match.Groups["space"].Value);
-
-			string lf = match.Groups["letter"].Value;
-			return string.Join(new string(' ', space), letters.Select(l => l.ToString(lf, formatProvider)));
+			return this.Format(format, formatProvider, "Flag Data");
 		}
 
+		/// <summary>
+		///  Gets the hash code as the Flag Data's value.
+		/// </summary>
+		/// <returns>The Flag Data's value.</returns>
 		public override int GetHashCode() => Value;
 
+		/// <summary>
+		///  Checks if the object is a <see cref="SceneId"/>, <see cref="Letter[]"/>, <see cref="string"/>, or
+		///  <see cref="int"/> and Checks for equality between the values of the letter strings.
+		/// </summary>
+		/// <param name="obj">The object to check for equality with.</param>
+		/// <returns>The object is a compatible type and has the same value as this letter string.</returns>
 		public override bool Equals(object obj) {
+			if (ReferenceEquals(this, obj)) return true;
 			if (obj is FlagData fd) return Equals(fd);
 			if (obj is Letter[] l) return Equals(l);
 			if (obj is string s) return Equals(s);
 			if (obj is int i) return Equals(i);
 			return false;
 		}
+		/// <summary>
+		///  Checks for equality between the values of the letter strings.
+		/// </summary>
+		/// <param name="other">The letter string to check for equality with.</param>
+		/// <returns>The letter string has the same value as this letter string.</returns>
 		public bool Equals(FlagData other) => other != null && Value == other.Value;
+		/// <summary>
+		///  Checks for equality between the value of the letter string and that of the letter array.
+		/// </summary>
+		/// <param name="other">The letter array to check for equality with values.</param>
+		/// <returns>The letter array has the same value as this letter string.</returns>
 		public bool Equals(Letter[] other) => other != null && Value == new FlagData(other).Value;
+		/// <summary>
+		///  Checks for equality between the value of the letter string and that of the string.
+		/// </summary>
+		/// <param name="other">The string to check for equality with values.</param>
+		/// <returns>The string has the same value as this letter string.</returns>
 		public bool Equals(string other) => other != null && Value == new FlagData(other).Value;
+		/// <summary>
+		///  Compares the value with that of this letter string.
+		/// </summary>
+		/// <param name="other">The value to check for equality with.</param>
+		/// <returns>The value is the same as this letter string's value.</returns>
 		public bool Equals(int other) => Value == other;
 
 		#endregion
 
-		#region IEnumerable Implementation
+		#region Parse
 
 		/// <summary>
-		///  Gets the enumerator for the letters in the Flag Data.
+		///  Parses the string representation of the Flag Data.
 		/// </summary>
-		/// <returns>An enumerator to traverse the letters in the Flag Data.</returns>
-		public IEnumerator<Letter> GetEnumerator() => ((IEnumerable<Letter>) letters).GetEnumerator();
-		IEnumerator IEnumerable.GetEnumerator() => letters.GetEnumerator();
-
-		#endregion
-
-		#region Comparison Operators
-
-		public static bool operator ==(FlagData a, FlagData b) {
-			return (!(a is null) ? (!(b is null) ? a.Equals(b) : false) : (b is null));
+		/// <param name="s">The string representation of the Flag Data.</param>
+		/// <returns>The parsed Flag Data.</returns>
+		/// 
+		/// <exception cref="ArgumentNullException">
+		///  <paramref name="s"/> is null.
+		/// </exception>
+		/// <exception cref="ArgumentException">
+		///  <paramref name="s"/> is not a valid Flag Data.
+		/// </exception>
+		public static FlagData Parse(string s) {
+			return Parse(s, PasswordStyles.Password);
 		}
-		public static bool operator !=(FlagData a, FlagData b) {
-			return (!(a is null) ? (!(b is null) ? !a.Equals(b) : true) : !(b is null));
+		/// <summary>
+		///  Parses the string representation of the Flag Data.
+		/// </summary>
+		/// <param name="s">The string representation of the Flag Data.</param>
+		/// <param name="style">The style to parse the Flag Data in.</param>
+		/// <returns>The parsed Flag Data.</returns>
+		/// 
+		/// <exception cref="ArgumentNullException">
+		///  <paramref name="s"/> is null.
+		/// </exception>
+		/// <exception cref="ArgumentException">
+		///  <paramref name="s"/> is not a valid Flag Data.-or-<paramref name="style"/> is not a valid
+		///  <see cref="PasswordStyles"/>.
+		/// </exception>
+		public static FlagData Parse(string s, PasswordStyles style) {
+			Letter[] letters = LetterUtils.ParseLetterString(s, style, "Flag Data", Length);
+			return new FlagData(letters);
 		}
 
-		#endregion
-
-		#region Casting
-
-		public static explicit operator FlagData(string s) => new FlagData(s);
-		public static explicit operator FlagData(int v) => new FlagData(v);
-
-		public static explicit operator string(FlagData fd) => fd.String;
-		public static explicit operator int(FlagData fd) => fd.Value;
-
-		#endregion
-
-		#region Utilities
-
-		public void Normalize(char garbageChar = Letter.GarbageChar) {
-			for (int i = 2; i < Length; i++)
-				letters[i].Normalize(garbageChar);
+		/// <summary>
+		///  Tries to parse the string representation of the Flag Data.
+		/// </summary>
+		/// <param name="s">The string representation of the Flag Data.</param>
+		/// <param name="flagData">The output Flag Data on success.</param>
+		/// <returns>True if the Flag Data was successfully parsed, otherwise false.</returns>
+		public static bool TryParse(string s, out FlagData flagData) {
+			return TryParse(s, PasswordStyles.Password, out flagData);
 		}
-		public FlagData Normalized(char garbageChar = Letter.GarbageChar) {
-			FlagData fd = new FlagData(this);
-			fd.Normalize(garbageChar);
-			return fd;
-		}
-		public void Randomize() {
-			for (int i = 2; i < Length; i++)
-				letters[i].Randomize();
-		}
-		public FlagData Randomized() {
-			FlagData fd = new FlagData(this);
-			fd.Randomize();
-			return fd;
+		/// <summary>
+		///  Tries to parse the string representation of the Flag Data.
+		/// </summary>
+		/// <param name="s">The string representation of the Flag Data.</param>
+		/// <param name="style">The style to parse the Flag Data in.</param>
+		/// <param name="flagData">The output Flag Data on success.</param>
+		/// <returns>True if the Flag Data was successfully parsed, otherwise false.</returns>
+		public static bool TryParse(string s, PasswordStyles style, out FlagData flagData) {
+			if (LetterUtils.TryParseLetterString(s, style, "Flag Data", Length, out Letter[] letters)) {
+				flagData = new FlagData(letters);
+				return true;
+			}
+			flagData = null;
+			return false;
 		}
 
 		#endregion
@@ -341,17 +387,6 @@ namespace HourglassPass {
 			return Operation(index, v => v ^ value);
 		}
 
-		/*public FlagData Operation(IFlagOperation iop) {
-			if (iop.Type == OpType.Multi) {
-				FlagMultiOperation mop = (FlagMultiOperation) iop;
-				foreach (FlagOperation op in mop.Operations)
-					Operation(op);
-			}
-			else {
-				Operation((FlagOperation) iop);
-			}
-			return this;
-		}*/
 		public FlagData Operation(FlagOperation[] fops) {
 			foreach (FlagOperation fop in fops)
 				Operation(fop);
@@ -383,7 +418,97 @@ namespace HourglassPass {
 
 		#endregion
 
+		#region ILetterString Mutate
+
+		/// <summary>
+		///  Returns a Flag Data with normalized interchangeable characters.
+		/// </summary>
+		/// <param name="garbageChar">The character to use for garbage letters.</param>
+		/// <returns>The normalized Flag Data with consistent interchangeable characters.</returns>
+		public FlagData Normalized(char garbageChar = Letter.GarbageChar) {
+			FlagData fd = new FlagData(this);
+			fd.Normalize(garbageChar);
+			return fd;
+		}
+		/// <summary>
+		///  Returns a Flag Data with randomized interchangeable characters.
+		/// </summary>
+		/// <returns>The randomized Flag Data with random interchangable characters.</returns>
+		public FlagData Randomized() {
+			FlagData fd = new FlagData(this);
+			fd.Randomize();
+			return fd;
+		}
+		ILetterString ILetterString.Normalized(char garbageChar) => Normalized(garbageChar);
+		ILetterString ILetterString.Randomized() => Randomized();
+
+		/// <summary>
+		///  Normalizes the Flag Data's interchangeable characters.
+		/// </summary>
+		/// <param name="garbageChar">The character to use for garbage letters.</param>
+		public void Normalize(char garbageChar = Letter.GarbageChar) {
+			for (int i = 2; i < Length; i++)
+				letters[i].Normalize(garbageChar);
+		}
+		/// <summary>
+		///  Randomizes the Flag Data's interchangeable characters.
+		/// </summary>
+		public void Randomize() {
+			for (int i = 2; i < Length; i++)
+				letters[i].Randomize();
+		}
+
+		#endregion
+
+		#region IEnumerable Implementation
+
+		/// <summary>
+		///  Gets the enumerator for the letters in the Flag Data.
+		/// </summary>
+		/// <returns>An enumerator to traverse the letters in the Flag Data.</returns>
+		public IEnumerator<Letter> GetEnumerator() => ((IEnumerable<Letter>) letters).GetEnumerator();
+		IEnumerator IEnumerable.GetEnumerator() => letters.GetEnumerator();
+
+		#endregion
+
+		#region Comparison Operators
+
+		public static bool operator ==(FlagData a, FlagData b) {
+			if (a is null)
+				return (b is null);
+			else if (b is null)
+				return false;
+			return a.Equals(b);
+		}
+		public static bool operator !=(FlagData a, FlagData b) {
+			if (a is null)
+				return !(b is null);
+			else if (b is null)
+				return true;
+			return !a.Equals(b);
+		}
+
+		#endregion
+
+		#region Casting
+
+		public static explicit operator FlagData(string s) => new FlagData(s);
+		public static explicit operator FlagData(int v) => new FlagData(v);
+
+		public static explicit operator string(FlagData fd) => fd.String;
+		public static explicit operator int(FlagData fd) => fd.Value;
+
+		#endregion
+
 		#region Helpers
+
+		/// <summary>
+		///  Returns true if the string is a valid Flag Data letter string.
+		/// </summary>
+		/// <param name="s">The string to validate.</param>
+		/// <returns>True if the string is a valid Flag Data letter string.</returns>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool IsValidString(string s) => Letter.IsValidString(s, Length);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static void ValidateLetters(Letter[] letters, string paramName) {
@@ -419,7 +544,7 @@ namespace HourglassPass {
 		private void CopyFromValue(int v) {
 			// Values are refersed that they print nicely in hex
 			for (int i = 0; i < Length; i++) {
-				letters[Length - i - 1].Value = v % Letter.ModValue;
+				letters[i].Value = v % Letter.ModValue;
 				v /= Letter.ModValue;
 			}
 		}

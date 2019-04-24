@@ -7,19 +7,21 @@ using System.Threading.Tasks;
 namespace HourglassPass.Testing {
 	class Program {
 		static void Main(string[] args) {
+			Console.WriteLine(int.TryParse(null, out _));
 			Console.WriteLine($"{23424323:N} {12341231221:D}");
 			Console.WriteLine($"{Convert.ToString(14, 2).PadLeft(4, '0')}");
 			while (true) {
 				try {
 					Console.Write("> ");
 					Password p = new Password(Console.ReadLine());
-					Console.WriteLine($"  Password: {p}");
-					Password.TryParse(Console.ReadLine(), out p);
-					Console.WriteLine($"  Password: {p}");
-					Console.WriteLine($"Normalized: {p.Normalized()}");
-					Console.WriteLine($"Randomized: {p.Randomized()}");
+					Console.WriteLine($"   Password: {p}");
+					//Password.TryParse(Console.ReadLine(), out p);
+					//Console.WriteLine($"  Password: {p}");
+					Console.WriteLine($" Normalized: {p:PN}");
+					Console.WriteLine($" Randomized: {p:PR}");
+					Console.WriteLine($"Hexidecimal: {p:PX}");
 					//Console.WriteLine($"Scene: {p.Scene.Value.ToString().PadLeft(4)}, Flags: {p.Flags:B1} ({p.Flags:X})");
-					Console.WriteLine($"Scene: {p.Scene,4:D}, Flags: {p.Flags:B1} ({p.Flags:X})");
+					Console.WriteLine($"Scene: {p.Scene,4:V}, Flags: {p.Flags:PB1} ({p.Flags:PX}) ({p.Flags:PD})");
 				} catch (Exception ex) {
 					Console.ForegroundColor = ConsoleColor.Red;
 					Console.WriteLine(ex);

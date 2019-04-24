@@ -5,14 +5,15 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
+using HourglassPass.Internal;
 
 namespace HourglassPass {
 	/// <summary>
 	///  A password identifier for an in-game Scene.
 	/// </summary>
 	[Serializable]
-	public sealed class SceneId : IEquatable<SceneId>, IEquatable<string>, IEquatable<int>,
-		IComparable, IComparable<string>, IComparable<int>, IFormattable, IEnumerable<Letter>
+	public sealed class SceneId : IEquatable<SceneId>, ILetterString,
+		IComparable, IComparable<string>, IComparable<int>
 	{
 		#region Constants
 
@@ -33,6 +34,14 @@ namespace HourglassPass {
 		///  The number of letters in this password structure.
 		/// </summary>
 		public const int Length = 3;
+
+		#region ILetterString Constants
+
+		int ILetterString.MinValue => Length;
+		int ILetterString.MaxValue => Length;
+		int IReadOnlyCollection<Letter>.Count => Length;
+
+		#endregion
 
 		#endregion
 
@@ -186,37 +195,275 @@ namespace HourglassPass {
 
 		#endregion
 
-		#region Utilities
+		#region Object Overrides
 
-		public void Normalize(char garbageChar = Letter.GarbageChar) {
-			letters[1].Normalize(garbageChar);
-			letters[2].Value &= 0x3;
+		/// <summary>
+		///  Gets the string representation of the Scene ID.
+		/// </summary>
+		/// <returns>The string representation of the Scene ID.</returns>
+		public override string ToString() => String;
+
+		/// <summary>
+		///  Gets the string representation of the Scene ID with the specified formatting.
+		/// </summary>
+		/// <param name="format">
+		///  The format to display the letter string in.<para/>
+		///  Password: P(Format)[spacing]. Format: S/s = Default, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.<para/>
+		///  Binary: VB[spacing] = Binary value format.<para/>
+		///  Value: V[format] = Integer value format.
+		/// </param>
+		/// <returns>The formatted string representation of the Scene ID.</returns>
+		/// 
+		/// <exception cref="FormatException">
+		///  <paramref name="format"/> is invalid.
+		/// </exception>
+		public string ToString(string format) => ToString(format, CultureInfo.CurrentCulture);
+		/// <summary>
+		///  Gets the string representation of the Scene ID with the specified formatting.
+		/// </summary>
+		/// <param name="format">
+		///  The format to display the letter string in.<para/>
+		///  Password: P(Format)[spacing]. Format: S/s = Default, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.<para/>
+		///  Binary: VB[spacing] = Binary value format.<para/>
+		///  Value: V[format] = Integer value format.
+		/// </param>
+		/// <param name="formatProvider">Unused.</param>
+		/// <returns>The formatted string representation of the Scene ID.</returns>
+		/// 
+		/// <exception cref="FormatException">
+		///  <paramref name="format"/> is invalid.
+		/// </exception>
+		public string ToString(string format, IFormatProvider formatProvider) {
+			return this.Format(format, formatProvider, "Scene ID");
 		}
+
+		/// <summary>
+		///  Gets the hash code as the Scene ID's value.
+		/// </summary>
+		/// <returns>The Scene ID's value.</returns>
+		public override int GetHashCode() => Value;
+
+		/// <summary>
+		///  Checks if the object is a <see cref="SceneId"/>, <see cref="Letter[]"/>, <see cref="string"/>, or
+		///  <see cref="int"/> and Checks for equality between the values of the letter strings.
+		/// </summary>
+		/// <param name="obj">The object to check for equality with.</param>
+		/// <returns>The object is a compatible type and has the same value as this letter string.</returns>
+		public override bool Equals(object obj) {
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj is SceneId id) return Equals(id);
+			if (obj is Letter[] l) return Equals(l);
+			if (obj is string s) return Equals(s);
+			if (obj is int i) return Equals(i);
+			return false;
+		}
+		/// <summary>
+		///  Checks for equality between the values of the letter strings.
+		/// </summary>
+		/// <param name="other">The letter string to check for equality with.</param>
+		/// <returns>The letter string has the same value as this letter string.</returns>
+		public bool Equals(SceneId other) => other != null && Value == other.Value;
+		/// <summary>
+		///  Checks for equality between the value of the letter string and that of the letter array.
+		/// </summary>
+		/// <param name="other">The letter array to check for equality with values.</param>
+		/// <returns>The letter array has the same value as this letter string.</returns>
+		public bool Equals(Letter[] other) => other != null && Value == new SceneId(other).Value;
+		/// <summary>
+		///  Checks for equality between the value of the letter string and that of the string.
+		/// </summary>
+		/// <param name="other">The string to check for equality with values.</param>
+		/// <returns>The string has the same value as this letter string.</returns>
+		public bool Equals(string other) => other != null && Value == new SceneId(other).Value;
+		/// <summary>
+		///  Compares the value with that of this letter string.
+		/// </summary>
+		/// <param name="other">The value to check for equality with.</param>
+		/// <returns>The value is the same as this letter string's value.</returns>
+		public bool Equals(int other) => Value == other;
+
+		/// <summary>
+		///  Checks if the object is a <see cref="SceneId"/>, <see cref="Letter"/>[], <see cref="string"/>, or
+		///  <see cref="int"/> and compares the values.
+		/// </summary>
+		/// <param name="obj">The object to compare values with.</param>
+		/// <returns>The comparison of the two objects.</returns>
+		/// 
+		/// <exception cref="ArgumentNullException">
+		///  <paramref name="obj"/> is null.
+		/// </exception>
+		/// <exception cref="ArgumentException">
+		///  <paramref name="obj"/> is not a <see cref="SceneId"/>, <see cref="Letter"/>[], <see cref="string"/>, or
+		///  <see cref="int"/>.
+		/// </exception>
+		public int CompareTo(object obj) {
+			if (obj is SceneId id) return CompareTo(id);
+			if (obj is Letter[] l) return CompareTo(l);
+			if (obj is string s) return CompareTo(s);
+			if (obj is int i) return CompareTo(i);
+			if (obj is null)
+				throw new ArgumentNullException(nameof(obj));
+			throw new ArgumentException($"Scene ID cannot be compared against type {obj.GetType().Name}!");
+		}
+		/// <summary>
+		///  Compares the values of the letter strings.
+		/// </summary>
+		/// <param name="obj">The letter string to compare with.</param>
+		/// <returns>The comparison of the two letter strings.</returns>
+		public int CompareTo(SceneId other) => Value.CompareTo(other.Value);
+		/// <summary>
+		///  Compares the values of the letter string and letter array.
+		/// </summary>
+		/// <param name="obj">The letter array to compare with.</param>
+		/// <returns>The comparison of the letter string and letter array.</returns>
+		public int CompareTo(Letter[] other) => Value.CompareTo(new SceneId(other).Value);
+		/// <summary>
+		///  Compares the values of the letter string and string.
+		/// </summary>
+		/// <param name="obj">The string to compare with.</param>
+		/// <returns>The comparison of the letter string and string.</returns>
+		public int CompareTo(string other) => Value.CompareTo(new SceneId(other).Value);
+		/// <summary>
+		///  Compares the value with the letter string's value.
+		/// </summary>
+		/// <param name="obj">The value to compare with.</param>
+		/// <returns>The comparison of the letter string and value.</returns>
+		public int CompareTo(int other) => Value.CompareTo(other);
+
+		#endregion
+
+		#region Parse
+
+		/// <summary>
+		///  Parses the string representation of the Scene ID.
+		/// </summary>
+		/// <param name="s">The string representation of the Scene ID.</param>
+		/// <returns>The parsed Scene ID.</returns>
+		/// 
+		/// <exception cref="ArgumentNullException">
+		///  <paramref name="s"/> is null.
+		/// </exception>
+		/// <exception cref="ArgumentException">
+		///  <paramref name="s"/> is not a valid Scene ID.
+		/// </exception>
+		public static SceneId Parse(string s) {
+			return Parse(s, PasswordStyles.Password);
+		}
+		/// <summary>
+		///  Parses the string representation of the Scene ID.
+		/// </summary>
+		/// <param name="s">The string representation of the Scene ID.</param>
+		/// <param name="style">The style to parse the Scene ID in.</param>
+		/// <returns>The parsed Scene ID.</returns>
+		/// 
+		/// <exception cref="ArgumentNullException">
+		///  <paramref name="s"/> is null.
+		/// </exception>
+		/// <exception cref="ArgumentException">
+		///  <paramref name="s"/> is not a valid Scene ID.-or-<paramref name="style"/> is not a valid
+		///  <see cref="PasswordStyles"/>.
+		/// </exception>
+		public static SceneId Parse(string s, PasswordStyles style) {
+			Letter[] letters = LetterUtils.ParseLetterString(s, style, "Scene ID", Length);
+			return new SceneId(letters);
+		}
+
+		/// <summary>
+		///  Tries to parse the string representation of the Scene ID.
+		/// </summary>
+		/// <param name="s">The string representation of the Scene ID.</param>
+		/// <param name="sceneId">The output Scene ID on success.</param>
+		/// <returns>True if the Scene ID was successfully parsed, otherwise false.</returns>
+		public static bool TryParse(string s, out SceneId sceneId) {
+			return TryParse(s, PasswordStyles.Password, out sceneId);
+		}
+		/// <summary>
+		///  Tries to parse the string representation of the Scene ID.
+		/// </summary>
+		/// <param name="s">The string representation of the Scene ID.</param>
+		/// <param name="style">The style to parse the Scene ID in.</param>
+		/// <param name="sceneId">The output Scene ID on success.</param>
+		/// <returns>True if the Scene ID was successfully parsed, otherwise false.</returns>
+		public static bool TryParse(string s, PasswordStyles style, out SceneId sceneId) {
+			if (LetterUtils.TryParseLetterString(s, style, "Scene ID", Length, out Letter[] letters)) {
+				sceneId = new SceneId(letters);
+				return true;
+			}
+			sceneId = null;
+			return false;
+		}
+
+		#endregion
+
+		#region ILetterString Mutate
+
+		/// <summary>
+		///  Returns a Scene ID with normalized interchangeable characters.
+		/// </summary>
+		/// <param name="garbageChar">The character to use for garbage letters.</param>
+		/// <returns>The normalized Scene ID with consistent interchangeable characters.</returns>
 		public SceneId Normalized(char garbageChar = Letter.GarbageChar) {
 			SceneId id = new SceneId(this);
 			id.Normalize(garbageChar);
 			return id;
 		}
-		public void Randomize() {
-			letters[1].Randomize();
-			// The 3rd letter randomizes the last 2 bits.
-			letters[2].Value = (letters[2].Value % 4) + random.Next(4) * 4;
-		}
+		/// <summary>
+		///  Returns a Scene ID with randomized interchangeable characters.
+		/// </summary>
+		/// <returns>The randomized Scene ID with random interchangable characters.</returns>
 		public SceneId Randomized() {
 			SceneId id = new SceneId(this);
 			id.Randomize();
 			return id;
 		}
+		ILetterString ILetterString.Normalized(char garbageChar) => Normalized(garbageChar);
+		ILetterString ILetterString.Randomized() => Randomized();
+
+		/// <summary>
+		///  Normalizes the Scene ID's interchangeable characters.
+		/// </summary>
+		/// <param name="garbageChar">The character to use for garbage letters.</param>
+		public void Normalize(char garbageChar = Letter.GarbageChar) {
+			letters[1].Normalize(garbageChar);
+			letters[2].Value &= 0x3;
+		}
+		/// <summary>
+		///  Randomizes the Scene ID's interchangeable characters.
+		/// </summary>
+		public void Randomize() {
+			letters[1].Randomize();
+			// The 3rd letter randomizes the last 2 bits.
+			letters[2].Value = (letters[2].Value % 4) + random.Next(4) * 4;
+		}
+
+		#endregion
+
+		#region IEnumerable Implementation
+
+		/// <summary>
+		///  Gets the enumerator for the letters in the Scene ID.
+		/// </summary>
+		/// <returns>An enumerator to traverse the letters in the Scene ID.</returns>
+		public IEnumerator<Letter> GetEnumerator() => ((IEnumerable<Letter>) letters).GetEnumerator();
+		IEnumerator IEnumerable.GetEnumerator() => letters.GetEnumerator();
 
 		#endregion
 
 		#region Comparison Operators
 
 		public static bool operator ==(SceneId a, SceneId b) {
-			return (!(a is null) ? (!(b is null) ? a.Equals(b) : false) :  (b is null));
+			if (a is null)
+				return (b is null);
+			else if (b is null)
+				return false;
+			return a.Equals(b);
 		}
 		public static bool operator !=(SceneId a, SceneId b) {
-			return (!(a is null) ? (!(b is null) ? !a.Equals(b) : true) : !(b is null));
+			if (a is null)
+				return !(b is null);
+			else if (b is null)
+				return true;
+			return !a.Equals(b);
 		}
 
 		public static bool operator <(SceneId a, SceneId b) => a.CompareTo(b) < 0;
@@ -237,87 +484,15 @@ namespace HourglassPass {
 
 		#endregion
 
-		#region Object Overrides
-
-		/// <summary>
-		///  Gets the string representation of the Scene ID.
-		/// </summary>
-		/// <returns>The string representation of the Scene ID.</returns>
-		public override string ToString() => String;
-
-		/// <summary>
-		///  Gets the string representation of the Scene ID with the specified formatting.
-		/// </summary>
-		/// <param name="format">
-		///  The format to display the Scene ID in.<para/>
-		///  S/empty = String, B = Binary, D = Decimal, N = Decimal with Commas, X = Hexidecimal.
-		/// </param>
-		/// <returns>The formatted string representation of the Scene ID.</returns>
-		public string ToString(string format) => ToString(format, CultureInfo.CurrentCulture);
-		/// <summary>
-		///  Gets the string representation of the Scene ID with the specified formatting.
-		/// </summary>
-		/// <param name="format">
-		///  The format to display the Scene ID in.<para/>
-		///  S/empty = String, B = Binary, D = Decimal, N = Decimal with Commas, X = Hexidecimal.
-		/// </param>
-		/// <param name="formatProvider">Unused.</param>
-		/// <returns>The formatted string representation of the Scene ID.</returns>
-		public string ToString(string format, IFormatProvider formatProvider) {
-			if (format == null)
-				return ToString();
-
-			switch (format) {
-			case "":
-			case "S": return ToString();
-			case "B": return $"{letters[2].ToString("B").Substring(2)} {letters[1]:B} {letters[0]:B}";
-			case "X": return $"{Value:X3}";
-			case "D": return Value.ToString();
-			case "N": return Value.ToString("N0");
-			}
-			throw new FormatException($"Invalid Scene ID format \"{format}\"!");
-		}
-
-		public override int GetHashCode() => Value;
-
-		public override bool Equals(object obj) {
-			if (obj is SceneId id) return Equals(id);
-			if (obj is Letter[] l) return Equals(l);
-			if (obj is string s) return Equals(s);
-			if (obj is int i) return Equals(i);
-			return false;
-		}
-		public bool Equals(SceneId other) => other != null && Value == other.Value;
-		public bool Equals(Letter[] other) => other != null && Value == new SceneId(other).Value;
-		public bool Equals(string other) => other != null && Value == new SceneId(other).Value;
-		public bool Equals(int other) => Value == other;
-
-		public int CompareTo(object obj) {
-			if (obj is SceneId id) return CompareTo(id);
-			if (obj is Letter[] l) return CompareTo(l);
-			if (obj is string s) return CompareTo(s);
-			if (obj is int i) return CompareTo(i);
-			throw new ArgumentException($"SceneId cannot be compared against type {obj.GetType().Name}!");
-		}
-		public int CompareTo(SceneId other) => Value.CompareTo(other.Value);
-		public int CompareTo(Letter[] other) => Value.CompareTo(new SceneId(other).Value);
-		public int CompareTo(string other) => Value.CompareTo(new SceneId(other).Value);
-		public int CompareTo(int other) => Value.CompareTo(other);
-
-		#endregion
-
-		#region IEnumerable Implementation
-
-		/// <summary>
-		///  Gets the enumerator for the letters in the Scene ID.
-		/// </summary>
-		/// <returns>An enumerator to traverse the letters in the Scene ID.</returns>
-		public IEnumerator<Letter> GetEnumerator() => ((IEnumerable<Letter>) letters).GetEnumerator();
-		IEnumerator IEnumerable.GetEnumerator() => letters.GetEnumerator();
-
-		#endregion
-
 		#region Helpers
+
+		/// <summary>
+		///  Returns true if the string is a valid Scene ID letter string.
+		/// </summary>
+		/// <param name="s">The string to validate.</param>
+		/// <returns>True if the string is a valid Scene ID letter string.</returns>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool IsValidString(string s) => Letter.IsValidString(s, Length);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static void ValidateLetters(Letter[] l, string paramName) {
