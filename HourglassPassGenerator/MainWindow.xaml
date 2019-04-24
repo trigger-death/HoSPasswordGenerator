@@ -4,9 +4,86 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:HourglassPass.Generator"
+        xmlns:conv="clr-namespace:HourglassPass.Generator.Converters"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
-        
+        Title="MainWindow" Height="450" Width="800" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType">
+  <Window.Resources>
+    <SolidColorBrush x:Key="TextBox.Static.Border" Color="#FFABAdB3"/>
+    <SolidColorBrush x:Key="TextBox.MouseOver.Border" Color="#FF7EB4EA"/>
+    <SolidColorBrush x:Key="TextBox.Focus.Border" Color="#FF569DE5"/>
+    <Style x:Key="TextBoxStyle1" TargetType="{x:Type TextBox}">
+      <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
+      <Setter Property="BorderBrush" Value="{StaticResource TextBox.Static.Border}"/>
+      <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="KeyboardNavigation.TabNavigation" Value="None"/>
+      <Setter Property="HorizontalContentAlignment" Value="Left"/>
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+      <Setter Property="AllowDrop" Value="true"/>
+      <Setter Property="ScrollViewer.PanningMode" Value="VerticalFirst"/>
+      <Setter Property="Stylus.IsFlicksEnabled" Value="False"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="{x:Type TextBox}">
+            <Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+              <ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsEnabled" Value="false">
+                <Setter Property="Opacity" TargetName="border" Value="0.56"/>
+              </Trigger>
+              <Trigger Property="IsMouseOver" Value="true">
+                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource TextBox.MouseOver.Border}"/>
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="true">
+                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource TextBox.Focus.Border}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+      <Style.Triggers>
+        <MultiTrigger>
+          <MultiTrigger.Conditions>
+            <Condition Property="IsInactiveSelectionHighlightEnabled" Value="true"/>
+            <Condition Property="IsSelectionActive" Value="false"/>
+          </MultiTrigger.Conditions>
+          <Setter Property="SelectionBrush" Value="{DynamicResource {x:Static SystemColors.InactiveSelectionHighlightBrushKey}}"/>
+        </MultiTrigger>
+      </Style.Triggers>
+    </Style>
+  </Window.Resources>
+  <Grid Margin="5,5,0,0">
+    <Grid HorizontalAlignment="Left" VerticalAlignment="Top">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="6"/>
+        <ColumnDefinition Width="240"/>
+      </Grid.ColumnDefinitions>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="*"/>
+      </Grid.RowDefinitions>
+      <Label Grid.Column="0" Grid.Row="0" Content="Password:" Padding="4" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+      <local:PasswordTextBox3 Grid.Column="2" Grid.Row="0" x:Name="passTextBox" Text="ZZZZZYYY" VerticalAlignment="Top" TextOptions.TextFormattingMode="Display" FontFamily="Consolas" VerticalContentAlignment="Center" Padding="4" Margin="0" FontSize="14" MaxLines="1"/>
+
+      <Label Grid.Column="0" Grid.Row="1" Content="Corrected:" Padding="4" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+      <TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding ElementName=passTextBox, Path=Text, Converter={conv:PasswordConverter}}" FontFamily="Consolas" VerticalAlignment="Center" Padding="5" FontSize="14"/>
+
+      <Label Grid.Column="0" Grid.Row="2" Content="Normalized:" Padding="4" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+      <TextBlock Grid.Column="2" Grid.Row="2" Text="{Binding ElementName=passTextBox, Path=Text, Converter={conv:PasswordNormalizeConverter}}" FontFamily="Consolas" VerticalAlignment="Center" Padding="5" FontSize="14"/>
+      
+      <Label Grid.Column="0" Grid.Row="3" Content="Scene ID:" Padding="4" VerticalAlignment="Top" HorizontalAlignment="Right"/>
+      <TextBlock Grid.Column="2" Grid.Row="3" Text="{Binding ElementName=passTextBox, Path=Text, Converter={conv:PasswordSceneConverter}}" VerticalAlignment="Center" Padding="4"/>
+
+      <Label Grid.Column="0" Grid.Row="4" Content="Flag Data:" Padding="4" VerticalAlignment="Top" HorizontalAlignment="Right"/>
+      <TextBlock Grid.Column="2" Grid.Row="4" Text="{Binding ElementName=passTextBox, Path=Text, Converter={conv:PasswordFlagsConverter}}" FontFamily="Lucida Console" VerticalAlignment="Center" Padding="5"/>
+
+
     </Grid>
+    <TextBox Style="{DynamicResource TextBoxStyle1}" Visibility="Collapsed"/>
+  </Grid>
 </Window>

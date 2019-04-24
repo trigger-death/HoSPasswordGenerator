@@ -10,8 +10,9 @@ namespace HourglassPass {
 	/// <summary>
 	///  A password identifier for an in-game Scene.
 	/// </summary>
-	public class SceneId : IFormattable, IEnumerable<Letter>, IEquatable<SceneId>, IEquatable<string>, IEquatable<int>,
-		IComparable, IComparable<string>, IComparable<int>
+	[Serializable]
+	public sealed class SceneId : IEquatable<SceneId>, IEquatable<string>, IEquatable<int>,
+		IComparable, IComparable<string>, IComparable<int>, IFormattable, IEnumerable<Letter>
 	{
 		#region Constants
 
@@ -209,6 +210,23 @@ namespace HourglassPass {
 
 		#endregion
 
+		#region Comparison Operators
+
+		public static bool operator ==(SceneId a, SceneId b) {
+			return (!(a is null) ? (!(b is null) ? a.Equals(b) : false) :  (b is null));
+		}
+		public static bool operator !=(SceneId a, SceneId b) {
+			return (!(a is null) ? (!(b is null) ? !a.Equals(b) : true) : !(b is null));
+		}
+
+		public static bool operator <(SceneId a, SceneId b) => a.CompareTo(b) < 0;
+		public static bool operator >(SceneId a, SceneId b) => a.CompareTo(b) > 0;
+
+		public static bool operator <=(SceneId a, SceneId b) => a.CompareTo(b) <= 0;
+		public static bool operator >=(SceneId a, SceneId b) => a.CompareTo(b) >= 0;
+
+		#endregion
+
 		#region Casting
 
 		public static explicit operator SceneId(string s) => new SceneId(s);
@@ -269,9 +287,9 @@ namespace HourglassPass {
 			if (obj is int i) return Equals(i);
 			return false;
 		}
-		public bool Equals(SceneId other) => Value == other.Value;
-		public bool Equals(Letter[] other) => Value == new SceneId(other).Value;
-		public bool Equals(string other) => Value == new SceneId(other).Value;
+		public bool Equals(SceneId other) => other != null && Value == other.Value;
+		public bool Equals(Letter[] other) => other != null && Value == new SceneId(other).Value;
+		public bool Equals(string other) => other != null && Value == new SceneId(other).Value;
 		public bool Equals(int other) => Value == other;
 
 		public int CompareTo(object obj) {

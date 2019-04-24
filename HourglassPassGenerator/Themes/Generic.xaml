@@ -1,0 +1,58 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:HourglassPass.Generator">
+
+
+  <Style TargetType="{x:Type local:PasswordTextBox}" BasedOn="{StaticResource {x:Type TextBox}}">
+    <Style.Triggers>
+      <Trigger Property="IsValidPassword" Value="False">
+        <Setter Property="Background" Value="IndianRed" />
+        <Setter Property="Foreground" Value="White" />
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+  <Style TargetType="{x:Type local:PasswordTextBox3}" BasedOn="{StaticResource {x:Type TextBox}}">
+    <Setter Property="CharacterCasing" Value="Upper"/>
+    <Style.Triggers>
+      <Trigger Property="IsValidPassword" Value="False">
+        <Setter Property="Background" Value="{Binding InvalidBackground, RelativeSource={RelativeSource Mode=Self}}" />
+        <Setter Property="Foreground" Value="{Binding InvalidForeground, RelativeSource={RelativeSource Mode=Self}}" />
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+  <Style TargetType="{x:Type local:PasswordTextBox2}">
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="{x:Type local:PasswordTextBox2}">
+          <Grid Margin="{TemplateBinding Margin}">
+            <TextBox x:Name="PART_TextBox"
+                     Margin="0"
+                     Padding="{TemplateBinding Padding}"
+                     Foreground="{TemplateBinding Foreground}"
+                     Background="{TemplateBinding Background}"
+                     CharacterCasing="Upper"
+                     Text="{TemplateBinding Text}"/>
+            <TextBlock x:Name="PART_Overlay"
+                       Background="Transparent"
+                       IsHitTestVisible="False"/>
+            <!--
+                       Margin="{Binding BorderThickness, ElementName=PART_TextBox}"
+                       Padding="{TemplateBinding Padding}"-->
+          </Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsValidPassword" Value="False">
+              <Setter TargetName="PART_TextBox" Property="Background" Value="{Binding InvalidBackground, RelativeSource={RelativeSource TemplatedParent}}" />
+              <Setter TargetName="PART_TextBox" Property="Foreground" Value="{Binding InvalidForeground, RelativeSource={RelativeSource TemplatedParent}}" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+    <!--<Style.Triggers>
+      <Trigger Property="IsValidPassword" Value="False">
+        <Setter Property="Background" Value="{Binding InvalidBackground}" />
+        <Setter Property="Foreground" Value="{Binding InvalidForeground}" />
+      </Trigger>
+    </Style.Triggers>-->
+  </Style>
+</ResourceDictionary>

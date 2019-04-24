@@ -59,12 +59,23 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Converters\PasswordConverter.cs" />
+    <Compile Include="Converters\PasswordNormalizeConverter.cs" />
+    <Compile Include="Converters\PasswordSceneConverter.cs" />
+    <Compile Include="Converters\PasswordFlagsConverter.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="Themes\Generic.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="PasswordTextBox3.cs" />
+    <Compile Include="PasswordTextBox2.cs" />
+    <Compile Include="PasswordTextBox.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>

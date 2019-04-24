@@ -4,15 +4,15 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace HourglassPass {
 	/// <summary>
 	///  Password data for in-game flags.
 	/// </summary>
-	public class FlagData : IFormattable, IEnumerable<Letter>,
-		IEquatable<FlagData>, IEquatable<string>, IEquatable<int>
+	[Serializable]
+	public sealed class FlagData : IEquatable<FlagData>, IEquatable<string>, IEquatable<int>,
+		IFormattable, IEnumerable<Letter>
 	{
 		#region Constants
 
@@ -235,9 +235,9 @@ namespace HourglassPass {
 			if (obj is int i) return Equals(i);
 			return false;
 		}
-		public bool Equals(FlagData other) => Value == other.Value;
-		public bool Equals(Letter[] other) => Value == new FlagData(other).Value;
-		public bool Equals(string other) => Value == new FlagData(other).Value;
+		public bool Equals(FlagData other) => other != null && Value == other.Value;
+		public bool Equals(Letter[] other) => other != null && Value == new FlagData(other).Value;
+		public bool Equals(string other) => other != null && Value == new FlagData(other).Value;
 		public bool Equals(int other) => Value == other;
 
 		#endregion
@@ -250,6 +250,17 @@ namespace HourglassPass {
 		/// <returns>An enumerator to traverse the letters in the Flag Data.</returns>
 		public IEnumerator<Letter> GetEnumerator() => ((IEnumerable<Letter>) letters).GetEnumerator();
 		IEnumerator IEnumerable.GetEnumerator() => letters.GetEnumerator();
+
+		#endregion
+
+		#region Comparison Operators
+
+		public static bool operator ==(FlagData a, FlagData b) {
+			return (!(a is null) ? (!(b is null) ? a.Equals(b) : false) : (b is null));
+		}
+		public static bool operator !=(FlagData a, FlagData b) {
+			return (!(a is null) ? (!(b is null) ? !a.Equals(b) : true) : !(b is null));
+		}
 
 		#endregion
 
@@ -330,7 +341,7 @@ namespace HourglassPass {
 			return Operation(index, v => v ^ value);
 		}
 
-		public FlagData Operation(IFlagOperation iop) {
+		/*public FlagData Operation(IFlagOperation iop) {
 			if (iop.Type == OpType.Multi) {
 				FlagMultiOperation mop = (FlagMultiOperation) iop;
 				foreach (FlagOperation op in mop.Operations)
@@ -340,17 +351,24 @@ namespace HourglassPass {
 				Operation((FlagOperation) iop);
 			}
 			return this;
+		}*/
+		public FlagData Operation(FlagOperation[] fops) {
+			foreach (FlagOperation fop in fops)
+				Operation(fop);
+			return this;
 		}
-		public FlagData Operation(FlagOperation op) {
-			switch (op.Type) {
-			case OpType.Zero: return Zero(op.Index);
-			case OpType.Negate: return Negate(op.Index);
+		public FlagData Operation(FlagOperation fop) {
+			foreach (FlagLetter op in fop.Flags) {
+				switch (fop.Type) {
+				case OpType.Zero: return Zero(op.Index);
+				case OpType.Negate: return Negate(op.Index);
 
-			case OpType.Set: return Set(op.Index, op.Operand);
-			case OpType.Add: return Add(op.Index, op.Operand);
-			case OpType.Sub: return Sub(op.Index, op.Operand);
-			case OpType.Or: return Or(op.Index, op.Operand);
-			case OpType.Xor: return Xor(op.Index, op.Operand);
+				case OpType.Set: return Set(op.Index, op.Value);
+				case OpType.Add: return Add(op.Index, op.Value);
+				case OpType.Sub: return Sub(op.Index, op.Value);
+				case OpType.Or: return Or(op.Index, op.Value);
+				case OpType.Xor: return Xor(op.Index, op.Value);
+				}
 			}
 			return this;
 		}

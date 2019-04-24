@@ -14,6 +14,8 @@ namespace HourglassPass.Testing {
 					Console.Write("> ");
 					Password p = new Password(Console.ReadLine());
 					Console.WriteLine($"  Password: {p}");
+					Password.TryParse(Console.ReadLine(), out p);
+					Console.WriteLine($"  Password: {p}");
 					Console.WriteLine($"Normalized: {p.Normalized()}");
 					Console.WriteLine($"Randomized: {p.Randomized()}");
 					//Console.WriteLine($"Scene: {p.Scene.Value.ToString().PadLeft(4)}, Flags: {p.Flags:B1} ({p.Flags:X})");

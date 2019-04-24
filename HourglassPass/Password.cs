@@ -8,7 +8,10 @@ namespace HourglassPass {
 	/// <summary>
 	///  A password structure containing both a Scene ID and Flag Data.
 	/// </summary>
-	public class Password : IEnumerable<Letter>, IEquatable<Password>, IEquatable<string>, IEquatable<int> {
+	[Serializable]
+	public sealed class Password : IEquatable<Password>, IEquatable<string>, IEquatable<int>,
+		IEnumerable<Letter>
+	{
 		#region Constants
 
 		/// <summary>
@@ -194,6 +197,26 @@ namespace HourglassPass {
 			}
 		}
 
+		public string NormalizedString {
+			get => $"{Scene.Normalized()}{Flags.Normalized()}";
+		}
+		public string RandomizedString {
+			get => $"{Scene.Randomized()}{Flags.Randomized()}";
+		}
+
+		#endregion
+
+		#region Parse
+
+		public static bool TryParse(string s, out Password password) {
+			if (IsValidString(s)) {
+				password = new Password(s);
+				return true;
+			}
+			password = null;
+			return false;
+		}
+
 		#endregion
 
 		#region Object Overrides
@@ -209,9 +232,9 @@ namespace HourglassPass {
 			if (obj is int i) return Equals(i);
 			return false;
 		}
-		public bool Equals(Password other) => Scene.Equals(other.Scene) && Flags.Equals(other.Flags);
-		public bool Equals(Letter[] other) => Equals(new Password(other));
-		public bool Equals(string other) => Equals(new Password(other));
+		public bool Equals(Password other) => other != null && Scene.Equals(other.Scene) && Flags.Equals(other.Flags);
+		public bool Equals(Letter[] other) => other != null && Equals(new Password(other));
+		public bool Equals(string other) => other != null && Equals(new Password(other));
 		public bool Equals(int other) => Value == other;
 
 		#endregion
@@ -224,6 +247,17 @@ namespace HourglassPass {
 		/// <returns>An enumerator to traverse the letters in the Password.</returns>
 		public IEnumerator<Letter> GetEnumerator() => Scene.Concat(Flags).GetEnumerator();
 		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+		#endregion
+
+		#region Comparison Operators
+
+		public static bool operator ==(Password a, Password b) {
+			return (!(a is null) ? (!(b is null) ? a.Equals(b) : false) : (b is null));
+		}
+		public static bool operator !=(Password a, Password b) {
+			return (!(a is null) ? (!(b is null) ? !a.Equals(b) : true) : !(b is null));
+		}
 
 		#endregion
 
@@ -262,6 +296,19 @@ namespace HourglassPass {
 
 		#region Helpers
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool IsValidString(string s) {
+			if (s == null)
+				throw new ArgumentNullException(nameof(s));
+			if (s.Length != Length)
+				return false;
+			for (int i = 0; i < Length; i++) {
+				char c = s[i];
+				if (!Letter.IsValidChar(ref c))
+					return false;
+			}
+			return true;
+		}
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static void ValidateLetters(Letter[] letters, string paramName) {
 			if (letters == null)

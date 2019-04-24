@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace HourglassPass {
 	/// <summary>
 	///  A single letter in a password structure. A letter contains both a 4-bit value, and the option of representing
 	///  zero with Garbage characters.
 	/// </summary>
+	[Serializable]
 	public struct Letter : IFormattable, IEquatable<Letter>, IEquatable<char>, IEquatable<int>,
 		IComparable, IComparable<Letter>, IComparable<char>, IComparable<int>
 	{
