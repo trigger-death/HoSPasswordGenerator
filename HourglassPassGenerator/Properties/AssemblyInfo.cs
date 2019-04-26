@@ -7,12 +7,12 @@ using System.Windows;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("HoSPasswordGen")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("Hourglass of Summer: Password Generator")]
+[assembly: AssemblyDescription("A tool for generating valid passwords for The DVD-PG game: Hourglass of Summer.")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("HoSPasswordGen")]
-[assembly: AssemblyCopyright("Copyright ©  2019")]
+[assembly: AssemblyCompany("Trigger's Tools & Games")]
+[assembly: AssemblyProduct("HourglassPassGenerator")]
+[assembly: AssemblyCopyright("Copyright © Robert Jordan {YEAR}")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

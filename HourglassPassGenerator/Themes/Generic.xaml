@@ -3,20 +3,21 @@
                     xmlns:local="clr-namespace:HourglassPass.Generator">
 
 
-  <Style TargetType="{x:Type local:PasswordTextBox}" BasedOn="{StaticResource {x:Type TextBox}}">
-    <Style.Triggers>
-      <Trigger Property="IsValidPassword" Value="False">
-        <Setter Property="Background" Value="IndianRed" />
-        <Setter Property="Foreground" Value="White" />
-      </Trigger>
-    </Style.Triggers>
-  </Style>
   <Style TargetType="{x:Type local:PasswordTextBox3}" BasedOn="{StaticResource {x:Type TextBox}}">
     <Setter Property="CharacterCasing" Value="Upper"/>
     <Style.Triggers>
       <Trigger Property="IsValidPassword" Value="False">
         <Setter Property="Background" Value="{Binding InvalidBackground, RelativeSource={RelativeSource Mode=Self}}" />
         <Setter Property="Foreground" Value="{Binding InvalidForeground, RelativeSource={RelativeSource Mode=Self}}" />
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+  <!--
+  <Style TargetType="{x:Type local:PasswordTextBox}" BasedOn="{StaticResource {x:Type TextBox}}">
+    <Style.Triggers>
+      <Trigger Property="IsValidPassword" Value="False">
+        <Setter Property="Background" Value="IndianRed" />
+        <Setter Property="Foreground" Value="White" />
       </Trigger>
     </Style.Triggers>
   </Style>
@@ -35,9 +36,6 @@
             <TextBlock x:Name="PART_Overlay"
                        Background="Transparent"
                        IsHitTestVisible="False"/>
-            <!--
-                       Margin="{Binding BorderThickness, ElementName=PART_TextBox}"
-                       Padding="{TemplateBinding Padding}"-->
           </Grid>
           <ControlTemplate.Triggers>
             <Trigger Property="IsValidPassword" Value="False">
@@ -48,11 +46,5 @@
         </ControlTemplate>
       </Setter.Value>
     </Setter>
-    <!--<Style.Triggers>
-      <Trigger Property="IsValidPassword" Value="False">
-        <Setter Property="Background" Value="{Binding InvalidBackground}" />
-        <Setter Property="Foreground" Value="{Binding InvalidForeground}" />
-      </Trigger>
-    </Style.Triggers>-->
-  </Style>
+  </Style>-->
 </ResourceDictionary>

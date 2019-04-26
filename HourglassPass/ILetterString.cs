@@ -5,29 +5,10 @@ namespace HourglassPass {
 	/// <summary>
 	///  An interface for all password structures containing <see cref="Letter"/> arrays.
 	/// </summary>
-	public interface ILetterString : IReadOnlyList<Letter>, //IEquatable<Letter[]>, IEquatable<string>, IEquatable<int>,
-		IFormattable
-	{
-		#region Constants
-
-		/// <summary>
-		///  Gets the mininum value constant for the letter string.
-		/// </summary>
-		int MinValue { get; }
-		/// <summary>
-		///  Gets the maximum value constant for the letter string.
-		/// </summary>
-		int MaxValue { get; }
-		/*/// <summary>
-		///  Gets the length constant for the letter string.
-		/// </summary>
-		int Count { get; }*/
-
-		#endregion
-
+	public interface ILetterString : IReadOnlyLetterString {
 		#region Properties
 
-		/*/// <summary>
+		/// <summary>
 		///  Gets or sets the letter at the specified index in the letter string.
 		/// </summary>
 		/// <param name="index">The index of the letter.</param>
@@ -36,7 +17,7 @@ namespace HourglassPass {
 		/// <exception cref="ArgumentOutOfRangeException">
 		///  <paramref name="index"/> is less than 0 or greater than or equal to <see cref="Count"/>.
 		/// </exception>
-		Letter this[int index] { get; set; }*/
+		new Letter this[int index] { get; set; }
 		/// <summary>
 		///  Gets or sets the letter string with an array of <see cref="Count"/> letters.
 		/// </summary>
@@ -47,7 +28,7 @@ namespace HourglassPass {
 		/// <exception cref="ArgumentException">
 		///  The length of <see cref="Letters"/> is not <see cref="Count"/>.
 		/// </exception>
-		Letter[] Letters { get; set; }
+		new Letter[] Letters { get; set; }
 		/// <summary>
 		///  Gets or sets the letter string with a string of <see cref="Count"/> letters.
 		/// </summary>
@@ -59,7 +40,7 @@ namespace HourglassPass {
 		///  The length of <see cref="String"/> is not <see cref="Count"/>.-or- A character in <see cref="String"/> is
 		///  not a valid letter character.
 		/// </exception>
-		string String { get; set; }
+		new string String { get; set; }
 		/// <summary>
 		///  Gets or sets the letter string with a numeric value.
 		/// </summary>
@@ -67,7 +48,7 @@ namespace HourglassPass {
 		/// <exception cref="ArgumentOutOfRangeException">
 		///  <see cref="Value"/> is less than <see cref="MinValue"/> or greater than <see cref="MaxValue"/>.
 		/// </exception>
-		int Value { get; set; }
+		new int Value { get; set; }
 
 		#endregion
 
@@ -78,12 +59,12 @@ namespace HourglassPass {
 		/// </summary>
 		/// <param name="garbageChar">The character to use for garbage letters.</param>
 		/// <returns>The normalized Password with consistent interchangeable characters.</returns>
-		ILetterString Normalized(char garbageChar = Letter.GarbageChar);
+		new ILetterString Normalized(char garbageChar = Letter.GarbageChar);
 		/// <summary>
 		///  Returns a letter string with randomized interchangeable characters.
 		/// </summary>
 		/// <returns>The randomized Password with random interchangable characters.</returns>
-		ILetterString Randomized();
+		new ILetterString Randomized();
 
 		/// <summary>
 		///  Normalizes the letter string's interchangeable characters.

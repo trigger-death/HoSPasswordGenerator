@@ -7,26 +7,32 @@ using HourglassPass.Internal;
 
 namespace HourglassPass {
 	/// <summary>
-	///  A helper structure for easily changing between Scene IDs, Letters, strings, and integers.
+	///  A password identifier for an in-game Scene.
 	/// </summary>
 	[Serializable]
-	public struct SceneId : IEquatable<SceneId>, IEquatable<PasswordSceneId>, ILetterString,
-		IComparable, IComparable<SceneId>, IComparable<PasswordSceneId>, IComparable<string>, IComparable<int>
+	public sealed class PasswordSceneId : IEquatable<PasswordSceneId>, IEquatable<SceneId>, ILetterString,
+		IComparable, IComparable<PasswordSceneId>, IComparable<SceneId>, IComparable<Letter[]>, IComparable<string>,
+		IComparable<int>
 	{
 		#region Constants
 
 		/// <summary>
+		///  Used for 3rd letter randomization.
+		/// </summary>
+		private static readonly Random random = new Random();
+
+		/// <summary>
 		///  The minimum value representable by a Scene ID.
 		/// </summary>
-		public const int MinValue = PasswordSceneId.MinValue;
+		public const int MinValue = 0x000;
 		/// <summary>
 		///  The maximum value representable by a Scene ID.
 		/// </summary>
-		public const int MaxValue = PasswordSceneId.MaxValue;
+		public const int MaxValue = 0x3FF;
 		/// <summary>
 		///  The number of letters in this password structure.
 		/// </summary>
-		public const int Length = PasswordSceneId.Length;
+		public const int Length = 3;
 
 		#region ILetterString Constants
 
@@ -41,14 +47,22 @@ namespace HourglassPass {
 		#region Fields
 
 		/// <summary>
-		///  The actual value of the Scene ID.
+		///  The array <see cref="Length"/> letters that make up the Scene ID.
 		/// </summary>
-		private int value;
+		private readonly Letter[] letters = new Letter[] {
+			new Letter(0, false),
+			new Letter(0, true),
+			new Letter(0, false),
+		};
 
 		#endregion
 
 		#region Constructors
 
+		/// <summary>
+		///  Constructs a Scene ID at zero.
+		/// </summary>
+		public PasswordSceneId() { }
 		/// <summary>
 		///  Constructs a Scene ID with an array of <see cref="Length"/> letters.
 		/// </summary>
@@ -60,9 +74,9 @@ namespace HourglassPass {
 		/// <exception cref="ArgumentException">
 		///  The length of <paramref name="letters"/> is not <see cref="Length"/>.
 		/// </exception>
-		public SceneId(Letter[] letters) {
+		public PasswordSceneId(Letter[] letters) {
 			ValidateLetters(letters, nameof(letters));
-			value = CopyFromLetters(letters);
+			CopyFromLetters(letters);
 		}
 		/// <summary>
 		///  Constructs a Scene ID with a string of <see cref="Length"/> letters.
@@ -76,9 +90,9 @@ namespace HourglassPass {
 		///  The length of <paramref name="scene"/> is not <see cref="Length"/>.-or- A character in
 		///  <paramref name="scene"/> is not a valid letter character.
 		/// </exception>
-		public SceneId(string scene) {
+		public PasswordSceneId(string scene) {
 			ValidateString(ref scene, nameof(scene));
-			value = CopyFromString(scene);
+			CopyFromString(scene);
 		}
 		/// <summary>
 		///  Constructs a Scene ID with a numeric value.
@@ -88,18 +102,25 @@ namespace HourglassPass {
 		/// <exception cref="ArgumentOutOfRangeException">
 		///  <paramref name="value"/> is less than <see cref="MinValue"/> or greater than <see cref="MaxValue"/>.
 		/// </exception>
-		public SceneId(int value) {
+		public PasswordSceneId(int value) {
 			ValidateValue(value, nameof(value));
-			this.value = value;
+			CopyFromValue(value);
 		}
 		/// <summary>
-		///  Constructs a copy of the Password Scene ID.
+		///  Constructs a copy of the Scene ID.
 		/// </summary>
-		/// <param name="sceneId">The Password Scene ID to construct a copy of.</param>
-		public SceneId(PasswordSceneId sceneId) {
+		/// <param name="sceneId">The Scene ID to construct a copy of.</param>
+		public PasswordSceneId(PasswordSceneId sceneId) {
 			if (sceneId == null)
 				throw new ArgumentNullException(nameof(sceneId));
-			value = CopyFromLetters(sceneId.Letters);
+			Array.Copy(sceneId.letters, letters, Length);
+		}
+		/// <summary>
+		///  Constructs a copy of the basic Scene ID.
+		/// </summary>
+		/// <param name="sceneId">The basic Scene ID to construct a copy of.</param>
+		public PasswordSceneId(SceneId sceneId) {
+			CopyFromValue(sceneId.Value);
 		}
 
 		#endregion
@@ -116,19 +137,8 @@ namespace HourglassPass {
 		///  <paramref name="index"/> is less than 0 or greater than or equal to <see cref="Length"/>.
 		/// </exception>
 		public Letter this[int index] {
-			get {
-				if (index < 0 || index >= Length)
-					throw new ArgumentOutOfRangeException(nameof(index), index,
-						$"Index must be between 0 and {(Length-1)}, got {index}!");
-				return new Letter((value >> (index * Letter.ShiftValue)) & Letter.MaskValue, false);
-			}
-			set {
-				if (index < 0 || index >= Length)
-					throw new ArgumentOutOfRangeException(nameof(index), index,
-						$"Index must be between 0 and {(Length-1)}, got {index}!");
-				this.value &= ~(Letter.MaskValue >> (index * Letter.ShiftValue));
-				this.value |= (value.Value << (index * Letter.ShiftValue));
-			}
+			get => letters[index];
+			set => letters[index].Character = value.Character;
 		}
 		/// <summary>
 		///  Gets or sets the Scene ID with an array of <see cref="Length"/> letters.
@@ -142,10 +152,9 @@ namespace HourglassPass {
 		/// </exception>
 		public Letter[] Letters {
 			get {
-				Letter[] letters = new Letter[3];
-				for (int i = 0; i < Length; i++)
-					letters[i].Value = (value >> (i * Letter.ShiftValue)) & Letter.MaskValue;
-				return letters;
+				Letter[] newLetters = new Letter[Length];
+				Array.Copy(letters, newLetters, Length);
+				return newLetters;
 			}
 			set {
 				ValidateLetters(value, nameof(Letters));
@@ -164,7 +173,7 @@ namespace HourglassPass {
 		///  not a valid letter character.
 		/// </exception>
 		public string String {
-			get => string.Join("", Letters);
+			get => string.Join("", letters);
 			set {
 				ValidateString(ref value, nameof(String));
 				CopyFromString(value);
@@ -178,10 +187,15 @@ namespace HourglassPass {
 		///  <see cref="Value"/> is less than <see cref="MinValue"/> or greater than <see cref="MaxValue"/>.
 		/// </exception>
 		public int Value {
-			get => value;
+			get {
+				int v = 0;
+				for (int i = 0; i < Length; i++)
+					v |= (letters[i].Value << (i * Letter.ShiftValue));
+				return v & MaxValue; // Make sure to cutoff the last two bits of the last letter
+			}
 			set {
 				ValidateValue(value, nameof(Value));
-				this.value = value;
+				CopyFromValue(value);
 			}
 		}
 
@@ -190,10 +204,10 @@ namespace HourglassPass {
 		#region Object Overrides
 
 		/// <summary>
-		///  Gets the string representation of the Scene ID's value.
+		///  Gets the string representation of the Scene ID.
 		/// </summary>
-		/// <returns>The string representation of the Scene ID's value.</returns>
-		public override string ToString() => value.ToString();
+		/// <returns>The string representation of the Scene ID.</returns>
+		public override string ToString() => String;
 
 		/// <summary>
 		///  Gets the string representation of the Scene ID with the specified formatting.
@@ -226,8 +240,6 @@ namespace HourglassPass {
 		///  <paramref name="format"/> is invalid.
 		/// </exception>
 		public string ToString(string format, IFormatProvider formatProvider) {
-			if (format == null || format.Length == 0)
-				return ToString();
 			return this.Format(format, formatProvider, "Scene ID");
 		}
 
@@ -235,10 +247,10 @@ namespace HourglassPass {
 		///  Gets the hash code as the Scene ID's value.
 		/// </summary>
 		/// <returns>The Scene ID's value.</returns>
-		public override int GetHashCode() => value;
+		public override int GetHashCode() => Value;
 
 		/// <summary>
-		///  Checks if the object is a <see cref="SceneId"/>, <see cref="PasswordSceneId"/>, <see cref="Letter"/>[],
+		///  Checks if the object is a <see cref="PasswordSceneId"/>, <see cref="SceneId"/>, <see cref="Letter"/>[],
 		///  <see cref="string"/>, or <see cref="int"/> and Checks for equality between the values of the letter
 		///  strings.
 		/// </summary>
@@ -246,8 +258,8 @@ namespace HourglassPass {
 		/// <returns>The object is a compatible type and has the same value as this letter string.</returns>
 		public override bool Equals(object obj) {
 			if (ReferenceEquals(this, obj)) return true;
-			if (obj is SceneId id) return Equals(id);
 			if (obj is PasswordSceneId pwid) return Equals(pwid);
+			if (obj is SceneId id) return Equals(id);
 			if (obj is Letter[] l) return Equals(l);
 			if (obj is string s) return Equals(s);
 			if (obj is int i) return Equals(i);
@@ -258,13 +270,13 @@ namespace HourglassPass {
 		/// </summary>
 		/// <param name="other">The letter string to check for equality with.</param>
 		/// <returns>The letter string has the same value as this letter string.</returns>
-		public bool Equals(SceneId other) => Value == other.Value;
+		public bool Equals(PasswordSceneId other) => other != null && Value == other.Value;
 		/// <summary>
 		///  Checks for equality between the values of the letter strings.
 		/// </summary>
 		/// <param name="other">The letter string to check for equality with.</param>
 		/// <returns>The letter string has the same value as this letter string.</returns>
-		public bool Equals(PasswordSceneId other) => other != null && Value == other.Value;
+		public bool Equals(SceneId other) => Value == other.Value;
 		/// <summary>
 		///  Checks for equality between the value of the letter string and that of the letter array.
 		/// </summary>
@@ -285,7 +297,7 @@ namespace HourglassPass {
 		public bool Equals(int other) => Value == other;
 
 		/// <summary>
-		///  Checks if the object is a <see cref="SceneId"/>, <see cref="PasswordSceneId"/>, <see cref="Letter"/>[],
+		///  Checks if the object is a <see cref="PasswordSceneId"/>, <see cref="SceneId"/>, <see cref="Letter"/>[],
 		///  <see cref="string"/>, or <see cref="int"/> and compares the values.
 		/// </summary>
 		/// <param name="obj">The object to compare values with.</param>
@@ -295,12 +307,12 @@ namespace HourglassPass {
 		///  <paramref name="obj"/> is null.
 		/// </exception>
 		/// <exception cref="ArgumentException">
-		///  <paramref name="obj"/> is not a <see cref="SceneId"/>, <see cref="PasswordSceneId"/>,
+		///  <paramref name="obj"/> is not a <see cref="PasswordSceneId"/>, <see cref="SceneId"/>,
 		///  <see cref="Letter"/>[], <see cref="string"/>, or <see cref="int"/>.
 		/// </exception>
 		public int CompareTo(object obj) {
-			if (obj is SceneId id) return CompareTo(id);
 			if (obj is PasswordSceneId pwid) return CompareTo(pwid);
+			if (obj is SceneId id) return CompareTo(id);
 			if (obj is Letter[] l) return CompareTo(l);
 			if (obj is string s) return CompareTo(s);
 			if (obj is int i) return CompareTo(i);
@@ -313,13 +325,13 @@ namespace HourglassPass {
 		/// </summary>
 		/// <param name="obj">The letter string to compare with.</param>
 		/// <returns>The comparison of the two letter strings.</returns>
-		public int CompareTo(SceneId other) => Value.CompareTo(other.Value);
+		public int CompareTo(PasswordSceneId other) => Value.CompareTo(other.Value);
 		/// <summary>
 		///  Compares the values of the letter strings.
 		/// </summary>
 		/// <param name="obj">The letter string to compare with.</param>
 		/// <returns>The comparison of the two letter strings.</returns>
-		public int CompareTo(PasswordSceneId other) => Value.CompareTo(other.Value);
+		public int CompareTo(SceneId other) => Value.CompareTo(other.Value);
 		/// <summary>
 		///  Compares the values of the letter string and letter array.
 		/// </summary>
@@ -355,7 +367,7 @@ namespace HourglassPass {
 		/// <exception cref="ArgumentException">
 		///  <paramref name="s"/> is not a valid Scene ID.
 		/// </exception>
-		public static SceneId Parse(string s) {
+		public static PasswordSceneId Parse(string s) {
 			return Parse(s, PasswordStyles.PasswordOrValue);
 		}
 		/// <summary>
@@ -372,9 +384,9 @@ namespace HourglassPass {
 		///  <paramref name="s"/> is not a valid Scene ID.-or-<paramref name="style"/> is not a valid
 		///  <see cref="PasswordStyles"/>.
 		/// </exception>
-		public static SceneId Parse(string s, PasswordStyles style) {
+		public static PasswordSceneId Parse(string s, PasswordStyles style) {
 			Letter[] letters = LetterUtils.ParseLetterString(s, style, "Scene ID", Length, out int value);
-			return (letters != null ? new SceneId(letters) : new SceneId(value));
+			return (letters != null ? new PasswordSceneId(letters) : new PasswordSceneId(value));
 		}
 		/// <summary>
 		///  Parses the string representation of the Scene ID's value.
@@ -393,8 +405,8 @@ namespace HourglassPass {
 		/// <exception cref="FormatException">
 		///  <paramref name="s"/> does not follow the number format.
 		/// </exception>
-		public static SceneId Parse(string s, NumberStyles style) {
-			return new SceneId(int.Parse(s, style));
+		public static PasswordSceneId Parse(string s, NumberStyles style) {
+			return new PasswordSceneId(int.Parse(s, style));
 		}
 
 		/// <summary>
@@ -403,7 +415,7 @@ namespace HourglassPass {
 		/// <param name="s">The string representation of the Scene ID.</param>
 		/// <param name="sceneId">The output Scene ID on success.</param>
 		/// <returns>True if the Scene ID was successfully parsed, otherwise false.</returns>
-		public static bool TryParse(string s, out SceneId sceneId) {
+		public static bool TryParse(string s, out PasswordSceneId sceneId) {
 			return TryParse(s, PasswordStyles.PasswordOrValue, out sceneId);
 		}
 		/// <summary>
@@ -413,12 +425,12 @@ namespace HourglassPass {
 		/// <param name="style">The style to parse the Scene ID in.</param>
 		/// <param name="sceneId">The output Scene ID on success.</param>
 		/// <returns>True if the Scene ID was successfully parsed, otherwise false.</returns>
-		public static bool TryParse(string s, PasswordStyles style, out SceneId sceneId) {
+		public static bool TryParse(string s, PasswordStyles style, out PasswordSceneId sceneId) {
 			if (LetterUtils.TryParseLetterString(s, style, "Scene ID", Length, out Letter[] letters, out int value)) {
-				sceneId = (letters != null ? new SceneId(letters) : new SceneId(value));
+				sceneId = (letters != null ? new PasswordSceneId(letters) : new PasswordSceneId(value));
 				return true;
 			}
-			sceneId = new SceneId();
+			sceneId = null;
 			return false;
 		}
 		/// <summary>
@@ -428,12 +440,12 @@ namespace HourglassPass {
 		/// <param name="style">The style to parse the Scene ID's value in.</param>
 		/// <param name="sceneId">The output Scene ID on success.</param>
 		/// <returns>True if the Scene ID was successfully parsed, otherwise false.</returns>
-		public static bool TryParse(string s, NumberStyles style, out SceneId sceneId) {
+		public static bool TryParse(string s, NumberStyles style, out PasswordSceneId sceneId) {
 			if (int.TryParse(s, style, CultureInfo.CurrentCulture, out int value)) {
-				sceneId = new SceneId(value);
+				sceneId = new PasswordSceneId(value);
 				return true;
 			}
-			sceneId = new SceneId();
+			sceneId = null;
 			return false;
 		}
 
@@ -446,12 +458,20 @@ namespace HourglassPass {
 		/// </summary>
 		/// <param name="garbageChar">The character to use for garbage letters.</param>
 		/// <returns>The normalized Scene ID with consistent interchangeable characters.</returns>
-		public SceneId Normalized(char garbageChar = Letter.GarbageChar) => this;
+		public PasswordSceneId Normalized(char garbageChar = Letter.GarbageChar) {
+			PasswordSceneId id = new PasswordSceneId(this);
+			id.Normalize(garbageChar);
+			return id;
+		}
 		/// <summary>
 		///  Returns a Scene ID with randomized interchangeable characters.
 		/// </summary>
 		/// <returns>The randomized Scene ID with random interchangable characters.</returns>
-		public SceneId Randomized() => this;
+		public PasswordSceneId Randomized() {
+			PasswordSceneId id = new PasswordSceneId(this);
+			id.Randomize();
+			return id;
+		}
 		ILetterString ILetterString.Normalized(char garbageChar) => Normalized(garbageChar);
 		ILetterString ILetterString.Randomized() => Randomized();
 		IReadOnlyLetterString IReadOnlyLetterString.Normalized(char garbageChar) => Normalized(garbageChar);
@@ -461,11 +481,18 @@ namespace HourglassPass {
 		///  Normalizes the Scene ID's interchangeable characters.
 		/// </summary>
 		/// <param name="garbageChar">The character to use for garbage letters.</param>
-		public void Normalize(char garbageChar = Letter.GarbageChar) { /* Do nothing */ }
+		public void Normalize(char garbageChar = Letter.GarbageChar) {
+			letters[1].Normalize(garbageChar);
+			letters[2].Value &= 0x3;
+		}
 		/// <summary>
 		///  Randomizes the Scene ID's interchangeable characters.
 		/// </summary>
-		public void Randomize() { /* Do nothing */ }
+		public void Randomize() {
+			letters[1].Randomize();
+			// The 3rd letter randomizes the last 2 bits.
+			letters[2].Value = (letters[2].Value % 4) + random.Next(4) * 4;
+		}
 
 		#endregion
 
@@ -475,32 +502,43 @@ namespace HourglassPass {
 		///  Gets the enumerator for the letters in the Scene ID.
 		/// </summary>
 		/// <returns>An enumerator to traverse the letters in the Scene ID.</returns>
-		public IEnumerator<Letter> GetEnumerator() => ((IEnumerable<Letter>) Letters).GetEnumerator();
-		IEnumerator IEnumerable.GetEnumerator() => Letters.GetEnumerator();
+		public IEnumerator<Letter> GetEnumerator() => ((IEnumerable<Letter>) letters).GetEnumerator();
+		IEnumerator IEnumerable.GetEnumerator() => letters.GetEnumerator();
 
 		#endregion
 
 		#region Comparison Operators
 
-		public static bool operator ==(SceneId a, SceneId b) =>  a.Equals(b);
-		public static bool operator !=(SceneId a, SceneId b) => !a.Equals(b);
+		public static bool operator ==(PasswordSceneId a, PasswordSceneId b) {
+			if (a is null)
+				return (b is null);
+			else if (b is null)
+				return false;
+			return a.Equals(b);
+		}
+		public static bool operator !=(PasswordSceneId a, PasswordSceneId b) {
+			if (a is null)
+				return !(b is null);
+			else if (b is null)
+				return true;
+			return !a.Equals(b);
+		}
 
-		public static bool operator <(SceneId a, SceneId b) => a.CompareTo(b) < 0;
-		public static bool operator >(SceneId a, SceneId b) => a.CompareTo(b) > 0;
+		public static bool operator <(PasswordSceneId a, PasswordSceneId b) => a.CompareTo(b) < 0;
+		public static bool operator >(PasswordSceneId a, PasswordSceneId b) => a.CompareTo(b) > 0;
 
-		public static bool operator <=(SceneId a, SceneId b) => a.CompareTo(b) <= 0;
-		public static bool operator >=(SceneId a, SceneId b) => a.CompareTo(b) >= 0;
+		public static bool operator <=(PasswordSceneId a, PasswordSceneId b) => a.CompareTo(b) <= 0;
+		public static bool operator >=(PasswordSceneId a, PasswordSceneId b) => a.CompareTo(b) >= 0;
 
 		#endregion
 
 		#region Casting
 
-		public static implicit operator SceneId(PasswordSceneId pwid) => new SceneId(pwid);
-		public static implicit operator SceneId(string s) => new SceneId(s);
-		public static implicit operator SceneId(int v) => new SceneId(v);
+		public static explicit operator PasswordSceneId(string s) => new PasswordSceneId(s);
+		public static explicit operator PasswordSceneId(int v) => new PasswordSceneId(v);
 
-		public static explicit operator string(SceneId id) => id.String;
-		public static explicit operator int(SceneId id) => id.Value;
+		public static explicit operator string(PasswordSceneId id) => id.String;
+		public static explicit operator int(PasswordSceneId id) => id.Value;
 
 		#endregion
 
@@ -537,23 +575,19 @@ namespace HourglassPass {
 				throw new ArgumentOutOfRangeException(paramName, v,
 					$"Scene ID value must be between {MinValue} and {MaxValue}, got {v}!");
 		}
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static int CopyFromLetters(Letter[] l) {
-			int value = 0;
+
+		private void CopyFromLetters(Letter[] l) {
 			for (int i = 0; i < Length; i++)
-				value |= l[i].Value << (i * Letter.ShiftValue);
-			return value & MaxValue; // Make sure to cutoff the last two bits of the last letter
+				letters[i].Character = l[i].Character;
 		}
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static int CopyFromString(string s) {
-			int value = 0;
+		private void CopyFromString(string s) {
 			for (int i = 0; i < Length; i++)
-				value |= Letter.GetValueOfChar(s[i]) << (i * Letter.ShiftValue);
-			return value & MaxValue; // Make sure to cutoff the last two bits of the last letter
+				letters[i].Character = s[i];
 		}
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static int CopyFromValue(int v) {
-			return v;
+
+		private void CopyFromValue(int v) {
+			for (int i = 0; i < Length; i++)
+				letters[i].Value = (v >> (i * Letter.ShiftValue)) & Letter.MaskValue;
 		}
 
 		/*public static int LettersToValue(Letter[] letters, string paramName) {

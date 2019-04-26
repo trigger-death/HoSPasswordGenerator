@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
 using HourglassPass.Internal;
 
 namespace HourglassPass {
@@ -16,14 +15,20 @@ namespace HourglassPass {
 		#region Constants
 
 		/// <summary>
-		///  The amount to shift <see cref="Scene"/>'s value by when combining with <see cref="Flags"/>'s value.
+		///  The amount to shift <see cref="Scene"/>'s value by when combining with <see cref="Checksum"/> and
+		///  <see cref="Flags"/>'s value.
 		/// </summary>
 		private const int SceneIdShift = 20;
+		/// <summary>
+		///  The amount to shift <see cref="Checksum"/>'s value by when combining with <see cref="Scene"/> and
+		///  <see cref="Flags"/>'s value.
+		/// </summary>
+		private const int ChecksumShift = 16;
 
 		/// <summary>
-		///  The initial VALID password state during the start of the game. The game gets it wrong. This works.
+		///  Gets a Password initialized with all zeros.
 		/// </summary>
-		public static readonly Password Initial = new Password("AZZOZBBB");
+		public static Password Zero => new Password("ZZZZZZZZ");
 
 		/// <summary>
 		///  The minimum value representable by a Password.
@@ -32,16 +37,30 @@ namespace HourglassPass {
 		/// <summary>
 		///  The maximum value representable by a Password.
 		/// </summary>
-		public const int MaxValue = (SceneId.MaxValue << SceneIdShift) | FlagData.MaxValue;
+		public const int MaxValue = (PasswordSceneId.MaxValue << SceneIdShift) |
+									(PasswordChecksum.MaxValue << ChecksumShift) | PasswordFlagData.MaxValue;
 		/// <summary>
 		///  The number of letters in this password structure.
 		/// </summary>
-		public const int Length = SceneId.Length + FlagData.Length;
+		public const int Length = PasswordSceneId.Length + PasswordChecksum.Length + PasswordFlagData.Length;
+
+		/// <summary>
+		///  Gets the offset in the password to the Scene ID letters.
+		/// </summary>
+		public const int SceneOffset = 0;
+		/// <summary>
+		///  Gets the offset in the password to the Garbage Checksum letters.
+		/// </summary>
+		public const int ChecksumOffset = PasswordSceneId.Length;
+		/// <summary>
+		///  Gets the offset in the password to the Flag Data letters.
+		/// </summary>
+		public const int FlagsOffet = ChecksumOffset + PasswordChecksum.Length;
 
 		#region ILetterString Constants
 
-		int ILetterString.MinValue => Length;
-		int ILetterString.MaxValue => Length;
+		int IReadOnlyLetterString.MinValue => Length;
+		int IReadOnlyLetterString.MaxValue => Length;
 		int IReadOnlyCollection<Letter>.Count => Length;
 
 		#endregion
@@ -51,13 +70,17 @@ namespace HourglassPass {
 		#region Fields
 
 		/// <summary>
-		///  The identifier for the scene to jump to.
+		///  Gets the identifier for the scene to jump to.
 		/// </summary>
-		public SceneId Scene { get; } = new SceneId();
+		public PasswordSceneId Scene { get; } = new PasswordSceneId();
 		/// <summary>
-		///  The currently set game flags.
+		///  Gets the checksum for the Password's garbage letters.
 		/// </summary>
-		public FlagData Flags { get; } = new FlagData();
+		public PasswordChecksum Checksum { get; } = new PasswordChecksum();
+		/// <summary>
+		///  Gets the currently set game flags.
+		/// </summary>
+		public PasswordFlagData Flags { get; } = new PasswordFlagData();
 
 		#endregion
 
@@ -123,6 +146,14 @@ namespace HourglassPass {
 		#region Properties
 
 		/// <summary>
+		///  Gets or sets the Scene ID associated with the password.
+		/// </summary>
+		public SceneId SceneId {
+			get => new SceneId(Scene);
+			set => Scene.Value = value.Value;
+		}
+
+		/// <summary>
 		///  Gets or sets the letter at the specified index in the Password.
 		/// </summary>
 		/// <param name="index">The index of the letter.</param>
@@ -136,19 +167,23 @@ namespace HourglassPass {
 				if (index < 0 || index >= Length)
 					throw new ArgumentOutOfRangeException(nameof(index), index,
 						$"Index must be between 0 and {(Length-1)}, got {index}!");
-				if (index < SceneId.Length)
+				if (index < ChecksumOffset)
 					return Scene[index];
+				else if (index < FlagsOffet)
+					return Checksum[index - ChecksumOffset];
 				else
-					return Flags[index - SceneId.Length];
+					return Flags[index - FlagsOffet];
 			}
 			set {
 				if (index < 0 || index >= Length)
 					throw new ArgumentOutOfRangeException(nameof(index), index,
 						$"Index must be between 0 and {(Length-1)}, got {index}!");
-				if (index < SceneId.Length)
+				if (index < ChecksumOffset)
 					Scene[index] = value;
+				else if (index < FlagsOffet)
+					Checksum[index - ChecksumOffset] = value;
 				else
-					Flags[index - SceneId.Length] = value;
+					Flags[index - FlagsOffet] = value;
 			}
 		}
 		/// <summary>
@@ -164,8 +199,9 @@ namespace HourglassPass {
 		public Letter[] Letters {
 			get {
 				Letter[] letters = new Letter[Length];
-				Array.Copy(Scene.Letters, letters, SceneId.Length);
-				Array.Copy(Flags.Letters, 0, letters, SceneId.Length, FlagData.Length);
+				Array.Copy(Scene.Letters,    0, letters, SceneOffset,    PasswordSceneId.Length);
+				Array.Copy(Checksum.Letters, 0, letters, ChecksumOffset, PasswordChecksum.Length);
+				Array.Copy(Flags.Letters,    0, letters, FlagsOffet,     PasswordFlagData.Length);
 				return letters;
 			}
 			set {
@@ -185,7 +221,7 @@ namespace HourglassPass {
 		///  not a valid letter character.
 		/// </exception>
 		public string String {
-			get => $"{Scene}{Flags}";
+			get => $"{Scene}{Checksum}{Flags}";
 			set {
 				ValidateString(ref value, nameof(String));
 				CopyFromString(value);
@@ -199,7 +235,7 @@ namespace HourglassPass {
 		///  <see cref="Value"/> is less than <see cref="MinValue"/> or greater than <see cref="MaxValue"/>.
 		/// </exception>
 		public int Value {
-			get => (Scene.Value << SceneIdShift) | Flags.Value;
+			get => (Scene.Value << SceneIdShift) | (Checksum.Value << ChecksumShift) | Flags.Value;
 			set {
 				ValidateValue(value, nameof(Value));
 				CopyFromValue(value);
@@ -221,7 +257,7 @@ namespace HourglassPass {
 		/// </summary>
 		/// <param name="format">
 		///  The format to display the letter string in.<para/>
-		///  Password: P(Format)[spacing]. Format: S/s = Default, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.<para/>
+		///  Password: P(Format)[spacing]. Format: S/s = Default, C/c = Corrected, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.<para/>
 		///  Binary: VB[spacing] = Binary value format.<para/>
 		///  Value: V[format] = Integer value format.
 		/// </param>
@@ -236,7 +272,7 @@ namespace HourglassPass {
 		/// </summary>
 		/// <param name="format">
 		///  The format to display the letter string in.<para/>
-		///  Password: P(Format)[spacing]. Format: S/s = Default, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.<para/>
+		///  Password: P(Format)[spacing]. Format: S/s = Default, C/c = Corrected, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.<para/>
 		///  Binary: VB[spacing] = Binary value format.<para/>
 		///  Value: V[format] = Integer value format.
 		/// </param>
@@ -254,28 +290,31 @@ namespace HourglassPass {
 		///  Gets the hash code as the Passwords's value.
 		/// </summary>
 		/// <returns>The Passwords's value.</returns>
-		//public override int GetHashCode() => Value;
+		public override int GetHashCode() => Value;
 
 		/// <summary>
-		///  Checks if the object is a <see cref="SceneId"/>, <see cref="Letter[]"/>, <see cref="string"/>, or
+		///  Checks if the object is a <see cref="Password"/>, <see cref="Letter"/>[], <see cref="string"/>, or
 		///  <see cref="int"/> and Checks for equality between the values of the letter strings.
 		/// </summary>
 		/// <param name="obj">The object to check for equality with.</param>
 		/// <returns>The object is a compatible type and has the same value as this letter string.</returns>
-		/*public override bool Equals(object obj) {
+		public override bool Equals(object obj) {
 			if (ReferenceEquals(this, obj)) return true;
 			if (obj is Password pw) return Equals(pw);
 			if (obj is Letter[] l) return Equals(l);
 			if (obj is string s) return Equals(s);
 			if (obj is int i) return Equals(i);
 			return false;
-		}*/
+		}
 		/// <summary>
 		///  Checks for equality between the values of the letter strings.
 		/// </summary>
 		/// <param name="other">The letter string to check for equality with.</param>
 		/// <returns>The letter string has the same value as this letter string.</returns>
-		public bool Equals(Password other) => other != null && Scene.Equals(other.Scene) && Flags.Equals(other.Flags);
+		public bool Equals(Password other) {
+			return other != null && Scene.Equals(other.Scene) && Checksum.Equals(other.Checksum) &&
+				Flags.Equals(other.Flags);
+		}
 		/// <summary>
 		///  Checks for equality between the value of the letter string and that of the letter array.
 		/// </summary>
@@ -312,7 +351,7 @@ namespace HourglassPass {
 		///  <paramref name="s"/> is not a valid Password.
 		/// </exception>
 		public static Password Parse(string s) {
-			return Parse(s, PasswordStyles.Password);
+			return Parse(s, PasswordStyles.PasswordOrValue);
 		}
 		/// <summary>
 		///  Parses the string representation of the Password.
@@ -329,8 +368,28 @@ namespace HourglassPass {
 		///  <see cref="PasswordStyles"/>.
 		/// </exception>
 		public static Password Parse(string s, PasswordStyles style) {
-			Letter[] letters = LetterUtils.ParseLetterString(s, style, "Password", Length);
-			return new Password(letters);
+			Letter[] letters = LetterUtils.ParseLetterString(s, style, "Password", Length, out int value);
+			return (letters != null ? new Password(letters) : new Password(value));
+		}
+		/// <summary>
+		///  Parses the string representation of the Password's value.
+		/// </summary>
+		/// <param name="s">The string representation of the Password.</param>
+		/// <param name="style">The style to parse the Password's value in.</param>
+		/// <returns>The parsed Password.</returns>
+		/// 
+		/// <exception cref="ArgumentNullException">
+		///  <paramref name="s"/> is null.
+		/// </exception>
+		/// <exception cref="ArgumentException">
+		///  <paramref name="s"/> is not a valid Password.-or-<paramref name="style"/> is not a valid
+		///  <see cref="NumberStyles"/>.
+		/// </exception>
+		/// <exception cref="FormatException">
+		///  <paramref name="s"/> does not follow the number format.
+		/// </exception>
+		public static Password Parse(string s, NumberStyles style) {
+			return new Password(int.Parse(s, style));
 		}
 
 		/// <summary>
@@ -340,7 +399,7 @@ namespace HourglassPass {
 		/// <param name="password">The output Password on success.</param>
 		/// <returns>True if the Password was successfully parsed, otherwise false.</returns>
 		public static bool TryParse(string s, out Password password) {
-			return TryParse(s, PasswordStyles.Password, out password);
+			return TryParse(s, PasswordStyles.PasswordOrValue, out password);
 		}
 		/// <summary>
 		///  Tries to parse the string representation of the Password.
@@ -350,8 +409,23 @@ namespace HourglassPass {
 		/// <param name="password">The output Password on success.</param>
 		/// <returns>True if the Password was successfully parsed, otherwise false.</returns>
 		public static bool TryParse(string s, PasswordStyles style, out Password password) {
-			if (LetterUtils.TryParseLetterString(s, style, "Password", Length, out Letter[] letters)) {
-				password = new Password(letters);
+			if (LetterUtils.TryParseLetterString(s, style, "Password", Length, out Letter[] letters, out int value)) {
+				password = (letters != null ? new Password(letters) : new Password(value));
+				return true;
+			}
+			password = null;
+			return false;
+		}
+		/// <summary>
+		///  Tries to parse the string representation of the Password's value.
+		/// </summary>
+		/// <param name="s">The string representation of the Password's value.</param>
+		/// <param name="style">The style to parse the Password's value in.</param>
+		/// <param name="password">The output Password on success.</param>
+		/// <returns>True if the Password was successfully parsed, otherwise false.</returns>
+		public static bool TryParse(string s, NumberStyles style, out Password password) {
+			if (int.TryParse(s, style, CultureInfo.CurrentCulture, out int value)) {
+				password = new Password(value);
 				return true;
 			}
 			password = null;
@@ -359,23 +433,6 @@ namespace HourglassPass {
 		}
 
 		#endregion
-
-		/*#region Parse
-
-		public static Password Parse(string s) {
-			return new Password(s);
-		}
-		
-		public static bool TryParse(string s, out Password password) {
-			if (IsValidString(s)) {
-				password = new Password(s);
-				return true;
-			}
-			password = null;
-			return false;
-		}
-
-		#endregion*/
 
 		#region ILetterString Mutate
 
@@ -398,8 +455,19 @@ namespace HourglassPass {
 			pw.Randomize();
 			return pw;
 		}
+		/// <summary>
+		///  Returns a corrected Password so that it will be accepted by the Password Input system.
+		/// </summary>
+		/// <returns>The corrected Password that will be accepted by the Password Input system.</returns>
+		public Password Corrected() {
+			Password pw = new Password(this);
+			pw.Correct();
+			return pw;
+		}
 		ILetterString ILetterString.Normalized(char garbageChar) => Normalized(garbageChar);
 		ILetterString ILetterString.Randomized() => Randomized();
+		IReadOnlyLetterString IReadOnlyLetterString.Normalized(char garbageChar) => Normalized(garbageChar);
+		IReadOnlyLetterString IReadOnlyLetterString.Randomized() => Randomized();
 
 		/// <summary>
 		///  Normalizes the Password's interchangeable characters.
@@ -407,14 +475,33 @@ namespace HourglassPass {
 		/// <param name="garbageChar">The character to use for garbage letters.</param>
 		public void Normalize(char garbageChar = Letter.GarbageChar) {
 			Scene.Normalize(garbageChar);
+			Checksum.Normalized(garbageChar);
 			Flags.Normalize(garbageChar);
+			FixChecksum();
 		}
 		/// <summary>
 		///  Randomizes the Password's interchangeable characters.
 		/// </summary>
 		public void Randomize() {
 			Scene.Randomize();
+			Checksum.Randomized();
 			Flags.Randomize();
+			FixChecksum();
+		}
+		/// <summary>
+		///  Correct's the Password so that it will be accepted by the Password Input system.
+		/// </summary>
+		public void Correct() {
+			// Calculate the checksum to see if we have 'X'
+			FixChecksum();
+			if (Checksum.Value == PasswordChecksum.MaxValue) {
+				// This is where the issues occur, 'X' is not accepted as a valid
+				// checksum, so we need to change one of the garbage letters to 'Z'.
+				// Yes, we already know this letter is zero.
+				Scene[1] = new Letter(0);
+			}
+			// Now recalculate and set the checksum to reflect our changes
+			FixChecksum();
 		}
 
 		#endregion
@@ -425,14 +512,14 @@ namespace HourglassPass {
 		///  Gets the enumerator for the letters in the Password.
 		/// </summary>
 		/// <returns>An enumerator to traverse the letters in the Password.</returns>
-		public IEnumerator<Letter> GetEnumerator() => Scene.Concat(Flags).GetEnumerator();
+		public IEnumerator<Letter> GetEnumerator() => Scene.Concat(Checksum).Concat(Flags).GetEnumerator();
 		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
 		#endregion
 
 		#region Comparison Operators
 
-		/*public static bool operator ==(Password a, Password b) {
+		public static bool operator ==(Password a, Password b) {
 			if (a is null)
 				return (b is null);
 			else if (b is null)
@@ -445,7 +532,7 @@ namespace HourglassPass {
 			else if (b is null)
 				return true;
 			return !a.Equals(b);
-		}*/
+		}
 
 		#endregion
 
@@ -493,20 +580,37 @@ namespace HourglassPass {
 		}
 
 		private void CopyFromLetters(Letter[] l) {
-			Letter[] sceneLetters = new Letter[SceneId.Length];
-			Letter[] flagsLetters = new Letter[FlagData.Length];
-			Array.Copy(l, sceneLetters, SceneId.Length);
-			Array.Copy(l, SceneId.Length, flagsLetters, 0, FlagData.Length);
-			Scene.Letters = sceneLetters;
-			Flags.Letters = flagsLetters;
+			Letter[] sceneLetters = new Letter[PasswordSceneId.Length];
+			Letter[] checksumLetters = new Letter[PasswordChecksum.Length];
+			Letter[] flagsLetters = new Letter[PasswordFlagData.Length];
+			Array.Copy(l, SceneOffset,    sceneLetters,    0, PasswordSceneId.Length);
+			Array.Copy(l, ChecksumOffset, checksumLetters, 0, PasswordChecksum.Length);
+			Array.Copy(l, FlagsOffet,     flagsLetters,    0, PasswordFlagData.Length);
+			Scene.Letters    = sceneLetters;
+			Checksum.Letters = checksumLetters;
+			Flags.Letters    = flagsLetters;
 		}
 		private void CopyFromString(string s) {
-			Scene.String = s.Substring(0, SceneId.Length);
-			Flags.String = s.Substring(SceneId.Length, FlagData.Length);
+			Scene.String    = s.Substring(SceneOffset,    PasswordSceneId.Length);
+			Checksum.String = s.Substring(ChecksumOffset, PasswordChecksum.Length);
+			Flags.String    = s.Substring(FlagsOffet,     PasswordFlagData.Length);
 		}
 		private void CopyFromValue(int value) {
-			Scene.Value = (value >> SceneIdShift) & SceneId.MaxValue;
-			Flags.Value = value & FlagData.MaxValue;
+			Scene.Value = (value >> SceneIdShift) & PasswordSceneId.MaxValue;
+			Checksum.Value = (value >> ChecksumShift) & PasswordChecksum.MaxValue;
+			Flags.Value = value & PasswordFlagData.MaxValue;
+		}
+		private void FixChecksum() {
+			int value = 0;
+			for (int i = 0, index = 0; i < Length; i++) {
+				Letter l = this[i];
+				if (l.AllowGarbage) {
+					if (l.IsGarbage)
+						value |= (1 << index);
+					index++;
+				}
+			}
+			Checksum.Value = value;
 		}
 
 

@@ -83,9 +83,9 @@ namespace HourglassPass {
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static void ValidateIndex(int index, string paramName) {
-			if (index < 0 || index >= FlagData.Length) {
+			if (index < 0 || index >= PasswordFlagData.Length) {
 				throw new ArgumentOutOfRangeException(paramName, index,
-					$"Index must be between 0 and {(FlagData.Length-1)}, got {index}!");
+					$"Index must be between 0 and {(PasswordFlagData.Length-1)}, got {index}!");
 			}
 		}
 
@@ -96,7 +96,7 @@ namespace HourglassPass {
 			if (flags == null)
 				throw new ArgumentNullException(nameof(flags));
 			StringBuilder str = new StringBuilder();
-			for (int i = 0; i < FlagData.Length; i++) {
+			for (int i = 0; i < PasswordFlagData.Length; i++) {
 				var flag = flags.Where(f => f.Index == i);
 				if (flag.Any()) {
 					if (type == OpType.Zero || type == OpType.Negate)
@@ -164,7 +164,7 @@ namespace HourglassPass {
 		///  that requires an operand.
 		/// </exception>
 		/// <exception cref="ArgumentOutOfRangeException">
-		///  <paramref name="index"/> is less than 0 or greater than or equal to <see cref="FlagData.Length"/>.
+		///  <paramref name="index"/> is less than 0 or greater than or equal to <see cref="PasswordFlagData.Length"/>.
 		/// </exception>
 		public FlagOperation(OpType type, int index) {
 			ValidateOpType(type, nameof(type));
@@ -187,7 +187,7 @@ namespace HourglassPass {
 		///  <paramref name="type"/> is an invalid enum value.
 		/// </exception>
 		/// <exception cref="ArgumentOutOfRangeException">
-		///  <paramref name="index"/> is less than 0 or greater than or equal to <see cref="FlagData.Length"/>.
+		///  <paramref name="index"/> is less than 0 or greater than or equal to <see cref="PasswordFlagData.Length"/>.
 		/// </exception>
 		public FlagOperation(OpType type, int index, Letter letter) {
 			ValidateOpType(type, nameof(type));
@@ -205,7 +205,7 @@ namespace HourglassPass {
 		///  <paramref name="type"/> is an invalid enum value.
 		/// </exception>
 		/// <exception cref="ArgumentOutOfRangeException">
-		///  <paramref name="index"/> is less than 0 or greater than or equal to <see cref="FlagData.Length"/>.
+		///  <paramref name="index"/> is less than 0 or greater than or equal to <see cref="PasswordFlagData.Length"/>.
 		/// </exception>
 		public FlagOperation(OpType type, int index, char character) {
 			ValidateOpType(type, nameof(type));
@@ -223,7 +223,7 @@ namespace HourglassPass {
 		///  <paramref name="type"/> is an invalid enum value.
 		/// </exception>
 		/// <exception cref="ArgumentOutOfRangeException">
-		///  <paramref name="index"/> is less than 0 or greater than or equal to <see cref="FlagData.Length"/>.
+		///  <paramref name="index"/> is less than 0 or greater than or equal to <see cref="PasswordFlagData.Length"/>.
 		/// </exception>
 		public FlagOperation(OpType type, int index, int value) {
 			ValidateOpType(type, nameof(type));
@@ -243,7 +243,7 @@ namespace HourglassPass {
 		///  <paramref name="type"/> is an invalid enum value.
 		/// </exception>
 		/// <exception cref="ArgumentOutOfRangeException">
-		///  <paramref name="index"/> is less than 0 or greater than or equal to <see cref="FlagData.Length"/>.
+		///  <paramref name="index"/> is less than 0 or greater than or equal to <see cref="PasswordFlagData.Length"/>.
 		/// </exception>
 		public FlagOperation(OpType type, params (int index, Letter letter)[] flags) {
 			ValidateOpType(type, nameof(type));
@@ -268,7 +268,7 @@ namespace HourglassPass {
 		///  <paramref name="type"/> is an invalid enum value.
 		/// </exception>
 		/// <exception cref="ArgumentOutOfRangeException">
-		///  <paramref name="index"/> is less than 0 or greater than or equal to <see cref="FlagData.Length"/>.
+		///  <paramref name="index"/> is less than 0 or greater than or equal to <see cref="PasswordFlagData.Length"/>.
 		/// </exception>
 		public FlagOperation(OpType type, params (int index, char character)[] flags) {
 			ValidateOpType(type, nameof(type));
@@ -293,7 +293,7 @@ namespace HourglassPass {
 		///  <paramref name="type"/> is an invalid enum value.
 		/// </exception>
 		/// <exception cref="ArgumentOutOfRangeException">
-		///  <paramref name="index"/> is less than 0 or greater than or equal to <see cref="FlagData.Length"/>.
+		///  <paramref name="index"/> is less than 0 or greater than or equal to <see cref="PasswordFlagData.Length"/>.
 		/// </exception>
 		public FlagOperation(OpType type, params (int index, int value)[] flags) {
 			ValidateOpType(type, nameof(type));
@@ -318,7 +318,7 @@ namespace HourglassPass {
 		///  <paramref name="type"/> is an invalid enum value.
 		/// </exception>
 		/// <exception cref="ArgumentOutOfRangeException">
-		///  <paramref name="index"/> is less than 0 or greater than or equal to <see cref="FlagData.Length"/>.
+		///  <paramref name="index"/> is less than 0 or greater than or equal to <see cref="PasswordFlagData.Length"/>.
 		/// </exception>
 		public FlagOperation(OpType type, params FlagLetter[] flags) {
 			ValidateOpType(type, nameof(type));
@@ -350,13 +350,13 @@ namespace HourglassPass {
 		public static FlagLetter[] ParseFlags(string s) {
 			if (s == null)
 				throw new ArgumentNullException(nameof(s));
-			if (s.Length != FlagData.Length)
+			if (s.Length != PasswordFlagData.Length)
 				throw new FormatException(
-					$"Flag Letter index must have a length of {FlagData.Length}, got {s.Length}!");
+					$"Flag Letter index must have a length of {PasswordFlagData.Length}, got {s.Length}!");
 
 			List<FlagLetter> flags = new List<FlagLetter>();
 
-			for (int i = 0; i < FlagData.Length; i++) {
+			for (int i = 0; i < PasswordFlagData.Length; i++) {
 				char c = s[i];
 				if (c >= Letter.MinChar && c <= Letter.MaxChar)
 					flags.Add(new FlagLetter(i, c));
@@ -398,9 +398,9 @@ namespace HourglassPass {
 		}
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static void ValidateIndex(int index, string paramName) {
-			if (index < 0 || index >= FlagData.Length) {
+			if (index < 0 || index >= PasswordFlagData.Length) {
 				throw new ArgumentOutOfRangeException(paramName, index,
-					$"Index must be between 0 and {(FlagData.Length-1)}, got {index}!");
+					$"Index must be between 0 and {(PasswordFlagData.Length-1)}, got {index}!");
 			}
 		}
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]

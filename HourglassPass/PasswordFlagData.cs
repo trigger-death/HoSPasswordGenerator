@@ -2,9 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
 using HourglassPass.Internal;
 
 namespace HourglassPass {
@@ -12,26 +10,26 @@ namespace HourglassPass {
 	///  Password data for in-game flags.
 	/// </summary>
 	[Serializable]
-	public sealed class FlagData : IEquatable<FlagData>, ILetterString {
+	public sealed class PasswordFlagData : IEquatable<PasswordFlagData>, ILetterString {
 		#region Constants
 
 		/// <summary>
 		///  The minimum value representable by Flag Data.
 		/// </summary>
-		public const int MinValue = 0x00000;
+		public const int MinValue = 0x0000;
 		/// <summary>
 		///  The maximum value representable by Flag Data.
 		/// </summary>
-		public const int MaxValue = 0xFFFFF;
+		public const int MaxValue = 0xFFFF;
 		/// <summary>
 		///  The number of letters in this password structure.
 		/// </summary>
-		public const int Length = 5;
+		public const int Length = 4;
 
 		#region ILetterString Constants
 
-		int ILetterString.MinValue => Length;
-		int ILetterString.MaxValue => Length;
+		int IReadOnlyLetterString.MinValue => Length;
+		int IReadOnlyLetterString.MaxValue => Length;
 		int IReadOnlyCollection<Letter>.Count => Length;
 
 		#endregion
@@ -45,7 +43,6 @@ namespace HourglassPass {
 		/// </summary>
 		private readonly Letter[] letters = {
 			new Letter(0, false),
-			new Letter(0, false),
 			new Letter(0, true),
 			new Letter(0, true),
 			new Letter(0, true),
@@ -58,7 +55,7 @@ namespace HourglassPass {
 		/// <summary>
 		///  Constructs a Flag Data with all flags unset (zero).
 		/// </summary>
-		public FlagData() { }
+		public PasswordFlagData() { }
 		/// <summary>
 		///  Constructs a Flag Data with an array of <see cref="Length"/> letters.
 		/// </summary>
@@ -70,7 +67,7 @@ namespace HourglassPass {
 		/// <exception cref="ArgumentException">
 		///  The length of <paramref name="letters"/> is not <see cref="Length"/>.
 		/// </exception>
-		public FlagData(Letter[] letters) {
+		public PasswordFlagData(Letter[] letters) {
 			ValidateLetters(letters, nameof(letters));
 			CopyFromLetters(letters);
 		}
@@ -86,7 +83,7 @@ namespace HourglassPass {
 		///  The length of <paramref name="flags"/> is not <see cref="Length"/>.-or- A character in
 		///  <paramref name="flags"/> is not a valid letter character.
 		/// </exception>
-		public FlagData(string flags) {
+		public PasswordFlagData(string flags) {
 			ValidateString(ref flags, nameof(flags));
 			CopyFromString(flags);
 		}
@@ -98,7 +95,7 @@ namespace HourglassPass {
 		/// <exception cref="ArgumentOutOfRangeException">
 		///  <paramref name="value"/> is less than <see cref="MinValue"/> or greater than <see cref="MaxValue"/>.
 		/// </exception>
-		public FlagData(int value) {
+		public PasswordFlagData(int value) {
 			ValidateValue(value, nameof(value));
 			CopyFromValue(value);
 		}
@@ -106,7 +103,7 @@ namespace HourglassPass {
 		///  Constructs a copy of the Flag Data.
 		/// </summary>
 		/// <param name="flagData">The Flag Data to construct a copy of.</param>
-		public FlagData(FlagData flagData) {
+		public PasswordFlagData(PasswordFlagData flagData) {
 			if (flagData == null)
 				throw new ArgumentNullException(nameof(flagData));
 			Array.Copy(flagData.letters, letters, Length);
@@ -204,7 +201,7 @@ namespace HourglassPass {
 		/// </summary>
 		/// <param name="format">
 		///  The format to display the letter string in.<para/>
-		///  Password: P(Format)[spacing]. Format: S/s = Default, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.<para/>
+		///  Password: P(Format)[spacing]. Format: S/s = Default, C/c = Corrected, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.<para/>
 		///  Binary: VB[spacing] = Binary value format.<para/>
 		///  Value: V[format] = Integer value format.
 		/// </param>
@@ -219,7 +216,7 @@ namespace HourglassPass {
 		/// </summary>
 		/// <param name="format">
 		///  The format to display the letter string in.<para/>
-		///  Password: P(Format)[spacing]. Format: S/s = Default, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.<para/>
+		///  Password: P(Format)[spacing]. Format: S/s = Default, C/c = Corrected, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.<para/>
 		///  Binary: VB[spacing] = Binary value format.<para/>
 		///  Value: V[format] = Integer value format.
 		/// </param>
@@ -240,14 +237,14 @@ namespace HourglassPass {
 		public override int GetHashCode() => Value;
 
 		/// <summary>
-		///  Checks if the object is a <see cref="SceneId"/>, <see cref="Letter[]"/>, <see cref="string"/>, or
+		///  Checks if the object is a <see cref="PasswordFlagData"/>, <see cref="Letter"/>[], <see cref="string"/>, or
 		///  <see cref="int"/> and Checks for equality between the values of the letter strings.
 		/// </summary>
 		/// <param name="obj">The object to check for equality with.</param>
 		/// <returns>The object is a compatible type and has the same value as this letter string.</returns>
 		public override bool Equals(object obj) {
 			if (ReferenceEquals(this, obj)) return true;
-			if (obj is FlagData fd) return Equals(fd);
+			if (obj is PasswordFlagData fd) return Equals(fd);
 			if (obj is Letter[] l) return Equals(l);
 			if (obj is string s) return Equals(s);
 			if (obj is int i) return Equals(i);
@@ -258,19 +255,19 @@ namespace HourglassPass {
 		/// </summary>
 		/// <param name="other">The letter string to check for equality with.</param>
 		/// <returns>The letter string has the same value as this letter string.</returns>
-		public bool Equals(FlagData other) => other != null && Value == other.Value;
+		public bool Equals(PasswordFlagData other) => other != null && Value == other.Value;
 		/// <summary>
 		///  Checks for equality between the value of the letter string and that of the letter array.
 		/// </summary>
 		/// <param name="other">The letter array to check for equality with values.</param>
 		/// <returns>The letter array has the same value as this letter string.</returns>
-		public bool Equals(Letter[] other) => other != null && Value == new FlagData(other).Value;
+		public bool Equals(Letter[] other) => other != null && Value == new PasswordFlagData(other).Value;
 		/// <summary>
 		///  Checks for equality between the value of the letter string and that of the string.
 		/// </summary>
 		/// <param name="other">The string to check for equality with values.</param>
 		/// <returns>The string has the same value as this letter string.</returns>
-		public bool Equals(string other) => other != null && Value == new FlagData(other).Value;
+		public bool Equals(string other) => other != null && Value == new PasswordFlagData(other).Value;
 		/// <summary>
 		///  Compares the value with that of this letter string.
 		/// </summary>
@@ -294,8 +291,8 @@ namespace HourglassPass {
 		/// <exception cref="ArgumentException">
 		///  <paramref name="s"/> is not a valid Flag Data.
 		/// </exception>
-		public static FlagData Parse(string s) {
-			return Parse(s, PasswordStyles.Password);
+		public static PasswordFlagData Parse(string s) {
+			return Parse(s, PasswordStyles.PasswordOrValue);
 		}
 		/// <summary>
 		///  Parses the string representation of the Flag Data.
@@ -311,9 +308,29 @@ namespace HourglassPass {
 		///  <paramref name="s"/> is not a valid Flag Data.-or-<paramref name="style"/> is not a valid
 		///  <see cref="PasswordStyles"/>.
 		/// </exception>
-		public static FlagData Parse(string s, PasswordStyles style) {
-			Letter[] letters = LetterUtils.ParseLetterString(s, style, "Flag Data", Length);
-			return new FlagData(letters);
+		public static PasswordFlagData Parse(string s, PasswordStyles style) {
+			Letter[] letters = LetterUtils.ParseLetterString(s, style, "Flag Data", Length, out int value);
+			return (letters != null ? new PasswordFlagData(letters) : new PasswordFlagData(value));
+		}
+		/// <summary>
+		///  Parses the string representation of the Flag Data's value.
+		/// </summary>
+		/// <param name="s">The string representation of the Flag Data.</param>
+		/// <param name="style">The style to parse the Flag Data's value in.</param>
+		/// <returns>The parsed Flag Data.</returns>
+		/// 
+		/// <exception cref="ArgumentNullException">
+		///  <paramref name="s"/> is null.
+		/// </exception>
+		/// <exception cref="ArgumentException">
+		///  <paramref name="s"/> is not a valid Flag Data.-or-<paramref name="style"/> is not a valid
+		///  <see cref="NumberStyles"/>.
+		/// </exception>
+		/// <exception cref="FormatException">
+		///  <paramref name="s"/> does not follow the number format.
+		/// </exception>
+		public static PasswordFlagData Parse(string s, NumberStyles style) {
+			return new PasswordFlagData(int.Parse(s, style));
 		}
 
 		/// <summary>
@@ -322,8 +339,8 @@ namespace HourglassPass {
 		/// <param name="s">The string representation of the Flag Data.</param>
 		/// <param name="flagData">The output Flag Data on success.</param>
 		/// <returns>True if the Flag Data was successfully parsed, otherwise false.</returns>
-		public static bool TryParse(string s, out FlagData flagData) {
-			return TryParse(s, PasswordStyles.Password, out flagData);
+		public static bool TryParse(string s, out PasswordFlagData flagData) {
+			return TryParse(s, PasswordStyles.PasswordOrValue, out flagData);
 		}
 		/// <summary>
 		///  Tries to parse the string representation of the Flag Data.
@@ -332,9 +349,24 @@ namespace HourglassPass {
 		/// <param name="style">The style to parse the Flag Data in.</param>
 		/// <param name="flagData">The output Flag Data on success.</param>
 		/// <returns>True if the Flag Data was successfully parsed, otherwise false.</returns>
-		public static bool TryParse(string s, PasswordStyles style, out FlagData flagData) {
-			if (LetterUtils.TryParseLetterString(s, style, "Flag Data", Length, out Letter[] letters)) {
-				flagData = new FlagData(letters);
+		public static bool TryParse(string s, PasswordStyles style, out PasswordFlagData flagData) {
+			if (LetterUtils.TryParseLetterString(s, style, "Flag Data", Length, out Letter[] letters, out int value)) {
+				flagData = (letters != null ? new PasswordFlagData(letters) : new PasswordFlagData(value));
+				return true;
+			}
+			flagData = null;
+			return false;
+		}
+		/// <summary>
+		///  Tries to parse the string representation of the Flag Data's value.
+		/// </summary>
+		/// <param name="s">The string representation of the Flag Data's value.</param>
+		/// <param name="style">The style to parse the Flag Data's value in.</param>
+		/// <param name="password">The output Flag Data on success.</param>
+		/// <returns>True if the Flag Data was successfully parsed, otherwise false.</returns>
+		public static bool TryParse(string s, NumberStyles style, out PasswordFlagData flagData) {
+			if (int.TryParse(s, style, CultureInfo.CurrentCulture, out int value)) {
+				flagData = new PasswordFlagData(value);
 				return true;
 			}
 			flagData = null;
@@ -345,54 +377,54 @@ namespace HourglassPass {
 
 		#region Operations
 
-		public FlagData Zero(int index) => Set(index, 0);
-		public FlagData Negate(int index) => Operation(index, v => ~v);
+		public PasswordFlagData Zero(int index) => Set(index, 0);
+		public PasswordFlagData Negate(int index) => Operation(index, v => ~v);
 
-		public FlagData Set(int index, Letter value) => Set(index, value.Value);
-		public FlagData Add(int index, Letter value) => Add(index, value.Value);
-		public FlagData Sub(int index, Letter value) => Sub(index, value.Value);
-		public FlagData And(int index, Letter value) => And(index, value.Value);
-		public FlagData Or(int index, Letter value) => Or(index, value.Value);
-		public FlagData Xor(int index, Letter value) => Xor(index, value.Value);
+		public PasswordFlagData Set(int index, Letter value) => Set(index, value.Value);
+		public PasswordFlagData Add(int index, Letter value) => Add(index, value.Value);
+		public PasswordFlagData Sub(int index, Letter value) => Sub(index, value.Value);
+		public PasswordFlagData And(int index, Letter value) => And(index, value.Value);
+		public PasswordFlagData Or(int index, Letter value) => Or(index, value.Value);
+		public PasswordFlagData Xor(int index, Letter value) => Xor(index, value.Value);
 
-		public FlagData Set(int index, char value) => Set(index, new Letter(value).Value);
-		public FlagData Add(int index, char value) => Add(index, new Letter(value).Value);
-		public FlagData Sub(int index, char value) => Sub(index, new Letter(value).Value);
-		public FlagData And(int index, char value) => And(index, new Letter(value).Value);
-		public FlagData Or(int index, char value) => Or(index, new Letter(value).Value);
-		public FlagData Xor(int index, char value) => Xor(index, new Letter(value).Value);
+		public PasswordFlagData Set(int index, char value) => Set(index, new Letter(value).Value);
+		public PasswordFlagData Add(int index, char value) => Add(index, new Letter(value).Value);
+		public PasswordFlagData Sub(int index, char value) => Sub(index, new Letter(value).Value);
+		public PasswordFlagData And(int index, char value) => And(index, new Letter(value).Value);
+		public PasswordFlagData Or(int index, char value) => Or(index, new Letter(value).Value);
+		public PasswordFlagData Xor(int index, char value) => Xor(index, new Letter(value).Value);
 
-		public FlagData Set(int index, int value) {
+		public PasswordFlagData Set(int index, int value) {
 			Letter.ValidateValue(value, nameof(value));
 			return Operation(index, v => value);
 		}
-		public FlagData Add(int index, int value) {
+		public PasswordFlagData Add(int index, int value) {
 			Letter.ValidateValue(value, nameof(value));
 			return Operation(index, v => Math.Min(Letter.MaxValue, v + value));
 		}
-		public FlagData Sub(int index, int value) {
+		public PasswordFlagData Sub(int index, int value) {
 			Letter.ValidateValue(value, nameof(value));
 			return Operation(index, v => Math.Max(Letter.MinValue, v - value));
 		}
-		public FlagData And(int index, int value) {
+		public PasswordFlagData And(int index, int value) {
 			Letter.ValidateValue(value, nameof(value));
 			return Operation(index, v => v & value);
 		}
-		public FlagData Or(int index, int value) {
+		public PasswordFlagData Or(int index, int value) {
 			Letter.ValidateValue(value, nameof(value));
 			return Operation(index, v => v | value);
 		}
-		public FlagData Xor(int index, int value) {
+		public PasswordFlagData Xor(int index, int value) {
 			Letter.ValidateValue(value, nameof(value));
 			return Operation(index, v => v ^ value);
 		}
 
-		public FlagData Operation(FlagOperation[] fops) {
+		public PasswordFlagData Operation(FlagOperation[] fops) {
 			foreach (FlagOperation fop in fops)
 				Operation(fop);
 			return this;
 		}
-		public FlagData Operation(FlagOperation fop) {
+		public PasswordFlagData Operation(FlagOperation fop) {
 			foreach (FlagLetter op in fop.Flags) {
 				switch (fop.Type) {
 				case OpType.Zero: return Zero(op.Index);
@@ -408,7 +440,7 @@ namespace HourglassPass {
 			return this;
 		}
 
-		private FlagData Operation(int index, Func<int, int> operation) {
+		private PasswordFlagData Operation(int index, Func<int, int> operation) {
 			int oldValue = letters[index].Value;
 			int newValue = operation(oldValue);
 			if (oldValue != newValue)
@@ -425,8 +457,8 @@ namespace HourglassPass {
 		/// </summary>
 		/// <param name="garbageChar">The character to use for garbage letters.</param>
 		/// <returns>The normalized Flag Data with consistent interchangeable characters.</returns>
-		public FlagData Normalized(char garbageChar = Letter.GarbageChar) {
-			FlagData fd = new FlagData(this);
+		public PasswordFlagData Normalized(char garbageChar = Letter.GarbageChar) {
+			PasswordFlagData fd = new PasswordFlagData(this);
 			fd.Normalize(garbageChar);
 			return fd;
 		}
@@ -434,27 +466,29 @@ namespace HourglassPass {
 		///  Returns a Flag Data with randomized interchangeable characters.
 		/// </summary>
 		/// <returns>The randomized Flag Data with random interchangable characters.</returns>
-		public FlagData Randomized() {
-			FlagData fd = new FlagData(this);
+		public PasswordFlagData Randomized() {
+			PasswordFlagData fd = new PasswordFlagData(this);
 			fd.Randomize();
 			return fd;
 		}
 		ILetterString ILetterString.Normalized(char garbageChar) => Normalized(garbageChar);
 		ILetterString ILetterString.Randomized() => Randomized();
+		IReadOnlyLetterString IReadOnlyLetterString.Normalized(char garbageChar) => Normalized(garbageChar);
+		IReadOnlyLetterString IReadOnlyLetterString.Randomized() => Randomized();
 
 		/// <summary>
 		///  Normalizes the Flag Data's interchangeable characters.
 		/// </summary>
 		/// <param name="garbageChar">The character to use for garbage letters.</param>
 		public void Normalize(char garbageChar = Letter.GarbageChar) {
-			for (int i = 2; i < Length; i++)
+			for (int i = 1; i < Length; i++)
 				letters[i].Normalize(garbageChar);
 		}
 		/// <summary>
 		///  Randomizes the Flag Data's interchangeable characters.
 		/// </summary>
 		public void Randomize() {
-			for (int i = 2; i < Length; i++)
+			for (int i = 1; i < Length; i++)
 				letters[i].Randomize();
 		}
 
@@ -473,14 +507,14 @@ namespace HourglassPass {
 
 		#region Comparison Operators
 
-		public static bool operator ==(FlagData a, FlagData b) {
+		public static bool operator ==(PasswordFlagData a, PasswordFlagData b) {
 			if (a is null)
 				return (b is null);
 			else if (b is null)
 				return false;
 			return a.Equals(b);
 		}
-		public static bool operator !=(FlagData a, FlagData b) {
+		public static bool operator !=(PasswordFlagData a, PasswordFlagData b) {
 			if (a is null)
 				return !(b is null);
 			else if (b is null)
@@ -492,11 +526,11 @@ namespace HourglassPass {
 
 		#region Casting
 
-		public static explicit operator FlagData(string s) => new FlagData(s);
-		public static explicit operator FlagData(int v) => new FlagData(v);
+		public static explicit operator PasswordFlagData(string s) => new PasswordFlagData(s);
+		public static explicit operator PasswordFlagData(int v) => new PasswordFlagData(v);
 
-		public static explicit operator string(FlagData fd) => fd.String;
-		public static explicit operator int(FlagData fd) => fd.Value;
+		public static explicit operator string(PasswordFlagData fd) => fd.String;
+		public static explicit operator int(PasswordFlagData fd) => fd.Value;
 
 		#endregion
 
@@ -542,11 +576,8 @@ namespace HourglassPass {
 				letters[i].Character = s[i];
 		}
 		private void CopyFromValue(int v) {
-			// Values are refersed that they print nicely in hex
-			for (int i = 0; i < Length; i++) {
-				letters[i].Value = v % Letter.ModValue;
-				v /= Letter.ModValue;
-			}
+			for (int i = 0; i < Length; i++)
+				letters[i].Value = (v >> (i * Letter.ShiftValue)) & Letter.MaskValue;
 		}
 
 		#endregion

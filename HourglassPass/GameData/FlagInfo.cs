@@ -11,6 +11,8 @@ namespace HourglassPass.GameData {
 		public string Description { get; }
 		public FlagOperation[] FlagOps { get; }
 
+		public FlagLifetime Lifetime { get; }
+
 		public bool HasFlagOps => FlagOps != null && FlagOps.Length != 0;
 	}
 }

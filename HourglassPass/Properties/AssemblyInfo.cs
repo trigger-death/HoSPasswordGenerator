@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("HosPassword")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("Hourglass of Summer: Password Library")]
+[assembly: AssemblyDescription("A library for working with the Password system in the DVD-PG game: Hourglass of Summer.")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("HosPassword")]
-[assembly: AssemblyCopyright("Copyright ©  2019")]
+[assembly: AssemblyCompany("Trigger's Tools & Games")]
+[assembly: AssemblyProduct("HourglassPass")]
+[assembly: AssemblyCopyright("Copyright © Robert Jordan {YEAR}")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

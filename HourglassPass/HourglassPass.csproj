@@ -42,23 +42,35 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="SceneId.cs" />
     <None Include="FlagOperation.Old.cs" />
     <Compile Include="GameData\Choice.cs" />
     <Compile Include="GameData\Decision.cs" />
-    <Compile Include="FlagData.cs" />
+    <Compile Include="PasswordFlagData.cs" />
     <Compile Include="FlagOperation.cs" />
     <Compile Include="GameData\FlagInfo.cs" />
+    <Compile Include="GameData\FlagLifetime.cs" />
+    <Compile Include="GameData\SceneLookup.cs" />
     <Compile Include="GameData\TitleChapter.cs" />
+    <Compile Include="PasswordChecksum.cs" />
     <Compile Include="Internal\LetterUtils.cs" />
     <Compile Include="ILetterString.cs" />
+    <Compile Include="IReadOnlyLetterString.cs" />
     <Compile Include="Letter.cs" />
     <Compile Include="Password.cs" />
+    <Compile Include="PasswordStyles.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SceneId.cs" />
+    <Compile Include="PasswordSceneId.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.ValueTuple">
       <Version>4.5.0</Version>
+    </PackageReference>
+    <PackageReference Include="TriggersTools.Build.BuildTime">
+      <Version>2.0.0</Version>
+    </PackageReference>
+    <PackageReference Include="TriggersTools.Build.CopyrightYear">
+      <Version>1.0.2</Version>
     </PackageReference>
     <PackageReference Include="TriggersTools.SharpUtils">
       <Version>1.0.3-build-000049</Version>

@@ -15,19 +15,6 @@ namespace HourglassPass.Internal {
 		Hexidecimal,
 		Decimal,
 	}*/
-	[Flags]
-	public enum PasswordStyles : uint {
-		Any = 0,
-		Password = 1,
-		Binary = 2,
-		Hex = 3,
-		Hexidecimal = Hex,
-		//Decimal = 4,
-
-		AllowSpecifier = (1 << 8),
-
-		FlagsMask = 0xFFFFFF00,
-	}
 	internal static class LetterUtils {
 		/// <summary>
 		///  Formats the letter.
@@ -35,7 +22,7 @@ namespace HourglassPass.Internal {
 		/// <param name="l">The letter to format.</param>
 		/// <param name="format">
 		///  The format to display the letter in.<para/>
-		///  S/s = Default, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.
+		///  S/C/s/c = Default, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.
 		/// </param>
 		/// <param name="formatProvider">Unused.</param>
 		/// <param name="ignoreNR">True if randomize and normalize are not applied.</param>
@@ -52,7 +39,9 @@ namespace HourglassPass.Internal {
 				throw new FormatException($"Letter format can only contain one letter, got \"{format}\"!");
 
 			switch (format[0]) {
+			case 'C':
 			case 'S': return l.ToString();
+			case 'c':
 			case 's': return l.ToString().ToLower();
 			case 'N': return (ignoreNR ? l : l.Normalized()).ToString();
 			case 'n': return (ignoreNR ? l : l.Normalized()).ToString().ToLower();
@@ -74,7 +63,7 @@ namespace HourglassPass.Internal {
 		/// <param name="ls">The letter string to format.</param>
 		/// <param name="format">
 		///  The format to display the letter string in.<para/>
-		///  Password: P(Format)[spacing]. Format: S/s = Default, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.<para/>
+		///  Password: P(Format)[spacing]. Format: S/s = Default, C/c = Corrected, N/n = Normalize, R/r = Randomize, B/b = Binary, D/d = Decimal, X/x = Hexidecimal.<para/>
 		///  Binary: VB[spacing] = Binary value format.<para/>
 		///  Value: V[format] = Integer value format.
 		/// </param>
@@ -88,7 +77,7 @@ namespace HourglassPass.Internal {
 		/// <exception cref="FormatException">
 		///  <paramref name="format"/> is invalid.
 		/// </exception>
-		internal static string Format(this ILetterString ls, string format, IFormatProvider formatProvider, string name) {
+		internal static string Format(this IReadOnlyLetterString ls, string format, IFormatProvider formatProvider, string name) {
 			if (ls == null)
 				throw new ArgumentNullException(nameof(ls));
 			if (format == null || format.Length == 0)
@@ -113,6 +102,8 @@ namespace HourglassPass.Internal {
 					ls = ls.Normalized();
 				else if (lf == "R" || lf == "r")
 					ls = ls.Randomized();
+				else if (ls is Password pw && (lf == "C" || lf == "c"))
+					ls = pw.Corrected();
 				return string.Join(new string(' ', spacing), ls.Select(l => l.Format(lf, formatProvider, true)));
 			}
 			else if (format.StartsWith("VB")) {
@@ -139,11 +130,51 @@ namespace HourglassPass.Internal {
 			}
 		}
 
+		internal static bool IsOnlyDigits(string s) => !s.Any(c => !char.IsDigit(c));
+
 		internal static Letter ParseLetter(string s, PasswordStyles style) {
 			if (s == null)
 				throw new ArgumentNullException(nameof(s));
+
+
+			// Check and remove flags
+			bool allowSpecifier = style.HasFlag(PasswordStyles.AllowSpecifier);
+			style &= ~PasswordStyles.FlagsMask;
+			PasswordStyles specifier = PasswordStyles.AllowSpecifier;
+
+			// Identify the specifier
+			if (s.StartsWith("0B") || s.StartsWith("0b"))
+				specifier = PasswordStyles.Binary;
+			else if (s.StartsWith("0X") || s.StartsWith("0x"))
+				specifier = PasswordStyles.Hex;
+			// Don't mix up hex/binary numbers with decimal
+			else if (style != PasswordStyles.Hex && style != PasswordStyles.Binary && IsOnlyDigits(s))
+				specifier = PasswordStyles.Value;
+
+			// Handle specifier or pure digits
+			if (specifier == PasswordStyles.Value) {
+				// Validate the decimal style
+				if (style != PasswordStyles.Value && style != PasswordStyles.PasswordOrValue &&
+					style != PasswordStyles.None)
+					throw new ArgumentException($"Letter format as value does not match style!");
+				style = specifier;
+			}
+			else if (specifier != PasswordStyles.AllowSpecifier) {
+				// Validate the specifier
+				if (!allowSpecifier)
+					throw new ArgumentException($"Letter format specifier is not allowed!");
+				if (style != PasswordStyles.None && specifier != style)
+					throw new ArgumentException($"Letter format specifier does not match style!");
+				style = specifier;
+				s = s.Substring(2);
+			}
+			else if (style == PasswordStyles.PasswordOrValue) {
+				// We're not a value, set us to password style
+				style = PasswordStyles.Password;
+			}
+
 			switch (style) {
-			case PasswordStyles.Any:
+			case PasswordStyles.None:
 			case PasswordStyles.Password:
 				if (s.Length != 1)
 					throw new ArgumentException($"Letter Password string must be one character long, got {s.Length}!");
@@ -156,6 +187,8 @@ namespace HourglassPass.Internal {
 				if (s.Length != 4)
 					throw new ArgumentException($"Letter Binary string must be four characters long, got {s.Length}!");
 				return new Letter(Convert.ToInt32(s, 2));
+			case PasswordStyles.Value:
+				return new Letter(int.Parse(s));
 			default:
 				throw new ArgumentException($"Invalid Password Style {style}!");
 			}
@@ -164,9 +197,44 @@ namespace HourglassPass.Internal {
 			letter = new Letter();
 			if (s == null || s.Length == 0)
 				return false;
-			char c; ;
+
+			// Check and remove flags
+			bool allowSpecifier = style.HasFlag(PasswordStyles.AllowSpecifier);
+			style &= ~PasswordStyles.FlagsMask;
+			PasswordStyles specifier = PasswordStyles.AllowSpecifier;
+
+			// Identify the specifier
+			if (s.StartsWith("0B") || s.StartsWith("0b"))
+				specifier = PasswordStyles.Binary;
+			else if (s.StartsWith("0X") || s.StartsWith("0x"))
+				specifier = PasswordStyles.Hex;
+			// Don't mix up hex/binary numbers with decimal
+			else if (style != PasswordStyles.Hex && style != PasswordStyles.Binary && IsOnlyDigits(s))
+				specifier = PasswordStyles.Value;
+
+			// Handle specifier or pure digits
+			if (specifier == PasswordStyles.Value) {
+				// Validate the decimal style
+				if (style != PasswordStyles.Value && style != PasswordStyles.PasswordOrValue &&
+					style != PasswordStyles.None)
+					return false;
+				style = specifier;
+			}
+			else if (specifier != PasswordStyles.AllowSpecifier) {
+				// Validate the specifier
+				if (!allowSpecifier || (style != PasswordStyles.None && specifier != style))
+					return false;
+				style = specifier;
+				s = s.Substring(2);
+			}
+			else if (style == PasswordStyles.PasswordOrValue) {
+				// We're not a value, set us to password style
+				style = PasswordStyles.Password;
+			}
+
+			char c;
 			switch (style) {
-			case PasswordStyles.Any:
+			case PasswordStyles.None:
 			case PasswordStyles.Password:
 				c = s[0];
 				if (s.Length != 1 || !Letter.IsValidChar(c))
@@ -188,39 +256,79 @@ namespace HourglassPass.Internal {
 				}
 				letter = new Letter(Convert.ToInt32(s, 2));
 				return true;
+			case PasswordStyles.Value:
+				if (!int.TryParse(s, out int value))
+					return false;
+				letter = new Letter(value);
+				return true;
 			default:
 				return false;
 			}
 		}
 
-		internal static Letter[] ParseLetterString(string s, PasswordStyles style, string name, int length) {
+		internal static Letter[] ParseLetterString(string s, PasswordStyles style, string name, int length, out int value) {
+			value = 0;
 			if (s == null)
 				throw new ArgumentNullException(nameof(s));
+
+			// Check and remove flags
 			bool allowSpecifier = style.HasFlag(PasswordStyles.AllowSpecifier);
 			style &= ~PasswordStyles.FlagsMask;
 			PasswordStyles specifier = PasswordStyles.AllowSpecifier;
+
+			// Identify the specifier
 			if (s.StartsWith("0B") || s.StartsWith("0b"))
 				specifier = PasswordStyles.Binary;
 			else if (s.StartsWith("0X") || s.StartsWith("0x"))
 				specifier = PasswordStyles.Hex;
-			if (specifier != PasswordStyles.AllowSpecifier) {
+			// Don't mix up hex/binary numbers with decimal
+			else if (style != PasswordStyles.Hex && style != PasswordStyles.Binary && IsOnlyDigits(s))
+				specifier = PasswordStyles.Value;
+
+			// Handle specifier or pure digits
+			if (specifier == PasswordStyles.Value) {
+				// Validate the decimal style
+				if (style != PasswordStyles.Value && style != PasswordStyles.PasswordOrValue &&
+					style != PasswordStyles.None)
+					throw new ArgumentException($"{name} format as value does not match style!");
+				style = specifier;
+			}
+			else if (specifier != PasswordStyles.AllowSpecifier) {
+				// Validate the specifier
 				if (!allowSpecifier)
 					throw new ArgumentException($"{name} format specifier is not allowed!");
-				if (style != PasswordStyles.Any && specifier != style)
+				if (style != PasswordStyles.None && specifier != style)
 					throw new ArgumentException($"{name} format specifier does not match style!");
 				style = specifier;
 				s = s.Substring(2);
 			}
-			s = Regex.Replace(s, @"\s+", "");
-			if (s.Length != length * (style == PasswordStyles.Binary ? 4 : 1))
-				throw new ArgumentException($"{name} string must be {length} letters long, got {s.Length} letters!",
-					nameof(s));
-			if (length == 0)
-				return Array.Empty<Letter>();
+			else if (style == PasswordStyles.PasswordOrValue) {
+				// We're not a value, set us to password style
+				style = PasswordStyles.Password;
+			}
 
+			// No trailing whitespace
+			if (s.Trim() != s)
+				throw new Exception($"{name} string cannot have trailing whitespace, got \"{s}\"!");
+
+			// Internal whitespace can be removed from binary
+			if (style == PasswordStyles.Binary) {
+				s = Regex.Replace(s, @"\s+", "");
+			}
+			if (style != PasswordStyles.Value) {
+				// Make sure the length is correct
+				if (s.Length != length * (style == PasswordStyles.Binary ? 4 : 1))
+					throw new ArgumentException($"{name} string must be {length} letters long, got {s.Length} letters!",
+						nameof(s));
+				// Easymode shortcut
+				if (length == 0)
+					return Array.Empty<Letter>();
+			}
+
+			// Parse the string
 			Letter[] letters = new Letter[length];
 			switch (style) {
-			case PasswordStyles.Any:
+			case PasswordStyles.None:
 			case PasswordStyles.Password:
 				for (int i = 0; i < length; i++)
 					letters[i] = new Letter(s[i]);
@@ -230,43 +338,80 @@ namespace HourglassPass.Internal {
 					letters[i] = new Letter(Convert.ToInt32(s.Substring(i, 1), 16));
 				return letters;
 			case PasswordStyles.Binary:
-				length *= 4;
-				for (int i = 0; i < length; i += 4)
-					letters[i] = new Letter(Convert.ToInt32(s.Substring(i, 4), 2));
+				for (int i = 0; i < length; i++)
+					letters[i] = new Letter(Convert.ToInt32(s.Substring(i*4, 4), 2));
 				return letters;
+			case PasswordStyles.Value:
+				value = int.Parse(s);
+				return null; // Null signifies a value return.
 			default:
 				throw new ArgumentException($"Invalid {name} Password Style {style}!");
 			}
 		}
 
-		internal static bool TryParseLetterString(string s, PasswordStyles style, string name, int length, out Letter[] letters) {
+		internal static bool TryParseLetterString(string s, PasswordStyles style, string name, int length, out Letter[] letters, out int value) {
 			letters = null;
+			value = 0;
 			if (s == null)
 				return false;
+			
+			// Check and remove flags
 			bool allowSpecifier = style.HasFlag(PasswordStyles.AllowSpecifier);
 			style &= ~PasswordStyles.FlagsMask;
 			PasswordStyles specifier = PasswordStyles.AllowSpecifier;
+
+			// Identify the specifier
 			if (s.StartsWith("0B") || s.StartsWith("0b"))
 				specifier = PasswordStyles.Binary;
 			else if (s.StartsWith("0X") || s.StartsWith("0x"))
 				specifier = PasswordStyles.Hex;
-			if (specifier != PasswordStyles.AllowSpecifier) {
-				if (!allowSpecifier || style != PasswordStyles.Any && specifier != style)
+			// Don't mix up hex/binary numbers with decimal
+			else if (style != PasswordStyles.Hex && style != PasswordStyles.Binary && IsOnlyDigits(s))
+				specifier = PasswordStyles.Value;
+
+			// Handle specifier or pure digits
+			if (specifier == PasswordStyles.Value) {
+				// Validate the decimal style
+				if (style != PasswordStyles.Value && style != PasswordStyles.PasswordOrValue &&
+					style != PasswordStyles.None)
+					return false;
+				style = specifier;
+			}
+			else if (specifier != PasswordStyles.AllowSpecifier) {
+				// Validate the specifier
+				if (!allowSpecifier || (style != PasswordStyles.None && specifier != style))
 					return false;
 				style = specifier;
 				s = s.Substring(2);
 			}
-			s = Regex.Replace(s, @"\s+", "");
-			if (s.Length != length * (style == PasswordStyles.Binary ? 4 : 1))
-				return false;
-			if (length == 0) {
-				letters = Array.Empty<Letter>();
-				return true;
+			else if (style == PasswordStyles.PasswordOrValue) {
+				// We're not a value, set us to password style
+				style = PasswordStyles.Password;
 			}
 
+			// No trailing whitespace
+			if (s.Trim() != s)
+				return false;
+
+			// Internal whitespace can be removed from binary
+			if (style == PasswordStyles.Binary) {
+				s = Regex.Replace(s, @"\s+", "");
+			}
+			if (style != PasswordStyles.Value) {
+				// Make sure the length is correct
+				if (s.Length != length * (style == PasswordStyles.Binary ? 4 : 1))
+					return false;
+				// Easymode shortcut
+				if (length == 0) {
+					letters = Array.Empty<Letter>();
+					return true;
+				}
+			}
+
+			// Parse the string
 			Letter[] newLetters = new Letter[length];
 			switch (style) {
-			case PasswordStyles.Any:
+			case PasswordStyles.None:
 			case PasswordStyles.Password:
 			case PasswordStyles.Hex:
 				for (int i = 0; i < length; i++) {
@@ -276,9 +421,14 @@ namespace HourglassPass.Internal {
 				break;
 			case PasswordStyles.Binary:
 				for (int i = 0; i < length; i++) {
-					if (!TryParseLetter(s.Substring(i * 4, 4), style, out newLetters[i]))
+					if (!TryParseLetter(s.Substring(i*4, 4), style, out newLetters[i]))
 						return false;
 				}
+				break;
+			case PasswordStyles.Value:
+				if (!int.TryParse(s, out value))
+					return false;
+				letters = null; // Null signifies a value return
 				break;
 			default:
 				return false;

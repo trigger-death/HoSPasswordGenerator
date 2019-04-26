@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using HourglassPass.Internal;
 
 namespace HourglassPass {
@@ -32,6 +31,14 @@ namespace HourglassPass {
 		///  The value used when multiplying and or moduloing a password value.
 		/// </summary>
 		public const int ModValue = 0x10;
+		/// <summary>
+		///  The number of bits to check by for a letter.
+		/// </summary>
+		public const int ShiftValue = 4;
+		/// <summary>
+		///  The the mask to use when shifting letters.
+		/// </summary>
+		public const int MaskValue = MaxValue;
 
 		/// <summary>
 		///  The minimum characters in the range of valid letter characters.
@@ -119,13 +126,13 @@ namespace HourglassPass {
 
 		/// <summary>
 		///  The actual character being displayed. If '\0', then the default character of 'Z' or 'B' is returned based
-		///  on <see cref="garbage"/>.
+		///  on <see cref="allowGarbage"/>.
 		/// </summary>
 		private char character;
 		/// <summary>
-		///  True if the <see cref="character"/> should use garbage characters in place of zero 'Z'.
+		///  True if the <see cref="character"/> can use garbage characters in place of zero 'Z'.
 		/// </summary>
-		private bool garbage;
+		private bool allowGarbage;
 
 		#endregion
 
@@ -142,31 +149,31 @@ namespace HourglassPass {
 		public Letter(char character) {
 			ValidateChar(ref character, nameof(character));
 			this.character = character;
-			garbage = IsGarbageChar(character);
+			allowGarbage = IsGarbageChar(character);
 		}
 		/// <summary>
 		///  Constructs a letter from a character and assigns if it's a garbage character based on its type.
 		/// </summary>
 		/// <param name="character">The character for the letter.</param>
-		/// <param name="garbage">True if zero should be represented with garbage characters.</param>
+		/// <param name="allowGarbage">True if zero can be represented with garbage characters.</param>
 		/// 
 		/// <remarks>
-		///  If <paramref name="character"/> and <paramref name="garbage"/> do not co-operate,
+		///  If <paramref name="character"/> and <paramref name="allowGarbage"/> do not co-operate,
 		///  <paramref name="character"/> will be converted.
 		/// </remarks>
 		/// 
 		/// <exception cref="ArgumentException">
 		///  <paramref name="character"/> is not in <see cref="ValidCharacters"/> or <see cref="GarbageCharacters"/>.
 		/// </exception>
-		public Letter(char character, bool garbage) {
+		public Letter(char character, bool allowGarbage) {
 			ValidateChar(ref character, nameof(character));
-			EnsureGarbageChar(ref character, garbage);
+			EnsureGarbageChar(ref character, allowGarbage);
 			this.character = character;
-			this.garbage = garbage;
+			this.allowGarbage = allowGarbage;
 		}
 		/// <summary>
 		///  Constructs a letter from a value between <see cref="MinValue"/> and <see cref="MaxValue"/> and sets
-		///  <see cref="IsGarbage"/> to false.
+		///  <see cref="AllowGarbage"/> to false.
 		/// </summary>
 		/// <param name="value">The numeric value for the letter.</param>
 		/// 
@@ -176,24 +183,25 @@ namespace HourglassPass {
 		public Letter(int value) {
 			ValidateValue(value, nameof(value));
 			character = Valid[value];
-			garbage = false;
+			allowGarbage = false;
 		}
 		/// <summary>
 		///  Constructs a letter from a value between <see cref="MinValue"/> and <see cref="MaxValue"/>.
 		/// </summary>
 		/// <param name="value">The numeric value for the letter.</param>
-		/// <param name="garbage">True if zero should be represented with garbage characters.</param>
+		/// <param name="allowGarbage">True if zero can be represented with garbage characters.</param>
 		/// 
 		/// <exception cref="ArgumentOutOfRangeException">
 		///  <paramref name="value"/> is less than <see cref="MinValue"/> or greater than <see cref="MaxValue"/>.
 		/// </exception>
-		public Letter(int value, bool garbage) {
+		public Letter(int value, bool allowGarbage) {
 			ValidateValue(value, nameof(value));
-			if (garbage && value == 0)
+			// Garbage characters can be 'Z'.
+			/*if (allowGarbage && value == 0)
 				character = Garbage[0];
-			else
-				character = Valid[value];
-			this.garbage = garbage;
+			else*/
+			character = Valid[value];
+			this.allowGarbage = allowGarbage;
 		}
 
 		#endregion
@@ -205,7 +213,7 @@ namespace HourglassPass {
 		/// </summary>
 		/// 
 		/// <remarks>
-		///  If <see cref="Character"/> and <see cref="IsGarbage"/> do not co-operate,
+		///  If <see cref="Character"/> and <see cref="AllowGarbage"/> do not co-operate,
 		///  <see cref="Character"/> will be converted.
 		/// </remarks>
 		/// 
@@ -216,16 +224,17 @@ namespace HourglassPass {
 			get {
 				// Handle default constructor Letters
 				if (character == '\0') {
-					if (garbage)
-						return Garbage[0];
-					else
+					// Garbage characters can be 'Z'.
+					//if (garbage)
+					//	return Garbage[0];
+					//else
 						return Valid[0];
 				}
 				return character;
 			}
 			set {
 				ValidateChar(ref value, nameof(Character));
-				EnsureGarbageChar(ref value, garbage);
+				EnsureGarbageChar(ref value, allowGarbage);
 				character = value;
 			}
 		}
@@ -240,10 +249,10 @@ namespace HourglassPass {
 			get => GetValueOfChar(Character);
 			set {
 				ValidateValue(value, nameof(Value));
-				if (garbage && value == 0)
-					character = Garbage[0];
-				else
+				if (Value != value) {
+					// Garbage characters can be 'Z'.
 					character = Valid[value];
+				}
 			}
 		}
 
@@ -252,16 +261,33 @@ namespace HourglassPass {
 		/// </summary>
 		/// 
 		/// <remarks>
-		///  If <see cref="Character"/> and <see cref="IsGarbage"/> do not co-operate,
+		///  If <see cref="Character"/> and <see cref="AllowGarbage"/> do not co-operate,
 		///  <see cref="Character"/> will be converted.
 		/// </remarks>
-		public bool IsGarbage {
-			get => garbage;
+		public bool AllowGarbage {
+			get => allowGarbage;
 			set {
-				garbage = value;
-				if (value && (character == Valid[0] || character == '\0'))
+				allowGarbage = value;
+				// Garbage characters can be 'Z'.
+				//if (value && (character == Valid[0] || character == '\0'))
+				//	character = Garbage[0];
+				if (!value && IsGarbage)
+					character = Valid[0];
+			}
+		}
+
+		/// <summary>
+		///  Gets or sets if the letter is currently zero, and being represented by a garbage letter.
+		/// </summary>
+		public bool IsGarbage {
+			get => IsGarbageChar(character);
+			set {
+				if (Value != 0)
+					throw new InvalidOperationException(
+						$"Cannot assign to {nameof(IsGarbage)} if {nameof(Value)} is non-zero!");
+				if (value)
 					character = Garbage[0];
-				if (!value && IsGarbageChar(character))
+				else
 					character = Valid[0];
 			}
 		}
@@ -398,7 +424,7 @@ namespace HourglassPass {
 		///  <paramref name="s"/> is not a valid letter.
 		/// </exception>
 		public static Letter Parse(string s) {
-			return LetterUtils.ParseLetter(s, PasswordStyles.Password);
+			return LetterUtils.ParseLetter(s, PasswordStyles.PasswordOrValue);
 		}
 		/// <summary>
 		///  Parses the string representation of the letter.
@@ -425,7 +451,7 @@ namespace HourglassPass {
 		/// <param name="letter">The output letter on success.</param>
 		/// <returns>True if the letter was successfully parsed, otherwise false.</returns>
 		public static bool TryParse(string s, out Letter letter) {
-			return LetterUtils.TryParseLetter(s, PasswordStyles.Password, out letter);
+			return LetterUtils.TryParseLetter(s, PasswordStyles.PasswordOrValue, out letter);
 		}
 		/// <summary>
 		///  Tries to parse the string representation of the letter.
@@ -448,11 +474,12 @@ namespace HourglassPass {
 		/// <param name="garbageChar">The character to use for garbage letters.</param>
 		/// <returns>The normalized letter with only one garbage character type.</returns>
 		public Letter Normalized(char garbageChar = GarbageChar) {
-			if (garbage) {
+			if (allowGarbage) {
 				if (!IsGarbageChar(garbageChar))
 					throw new ArgumentException($"'{garbageChar}' is not a garbage character!", nameof(garbageChar));
+				// Normalize garbage characters to zero 'Z'.
 				if (IsGarbageChar(character))
-					return new Letter(garbageChar, true);
+					character = Valid[0];
 			}
 			return this;
 		}
@@ -461,9 +488,9 @@ namespace HourglassPass {
 		/// </summary>
 		/// <returns>The randomized letter.</returns>
 		public Letter Randomized() {
-			if (garbage) {
-				if (IsGarbageChar(character))
-					return new Letter(Garbage[random.Next(Garbage.Length)], true);
+			if (allowGarbage && Value == 0) {
+				// Randomizing should always return a garbage character, because that's how it's done.
+				return new Letter(Garbage[random.Next(Garbage.Length)], true);
 			}
 			return this;
 		}
@@ -473,20 +500,21 @@ namespace HourglassPass {
 		/// </summary>
 		/// <param name="garbageChar">The character to use for garbage letters.</param>
 		public void Normalize(char garbageChar = GarbageChar) {
-			if (garbage) {
+			if (allowGarbage) {
 				if (!IsGarbageChar(garbageChar))
 					throw new ArgumentException($"'{garbageChar}' is not a garbage character!", nameof(garbageChar));
+				// Normalize garbage characters to zero 'Z'.
 				if (IsGarbageChar(character))
-					character = garbageChar;
+					character = Valid[0];
 			}
 		}
 		/// <summary>
 		///  Randomizes the letter's garbage character, if currently using one.
 		/// </summary>
 		public void Randomize() {
-			if (garbage) {
-				if (IsGarbageChar(character))
-					character = Garbage[random.Next(Garbage.Length)];
+			if (allowGarbage && Value == 0) {
+				// Randomizing should always return a garbage character, because that's how it's done.
+				character = Garbage[random.Next(Garbage.Length)];
 			}
 		}
 
@@ -592,10 +620,11 @@ namespace HourglassPass {
 			return Array.IndexOf(Garbage, c) != -1;
 		}
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static void EnsureGarbageChar(ref char c, bool garbage) {
-			if (garbage && c == Valid[0])
-				c = Garbage[0];
-			if (!garbage && IsGarbageChar(c))
+		private static void EnsureGarbageChar(ref char c, bool allowGarbage) {
+			// Garbage characters can be 'Z'.
+			//if (garbage && c == Valid[0])
+			//	c = Garbage[0];
+			if (!allowGarbage && IsGarbageChar(c))
 				c = Valid[0];
 		}
 

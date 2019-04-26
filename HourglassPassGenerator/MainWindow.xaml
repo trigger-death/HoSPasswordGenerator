@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:HourglassPass.Generator"
         xmlns:conv="clr-namespace:HourglassPass.Generator.Converters"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType">
+        Title="Hourglass of Summer: Password Generator" Height="450" Width="800" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType">
   <Window.Resources>
     <SolidColorBrush x:Key="TextBox.Static.Border" Color="#FFABAdB3"/>
     <SolidColorBrush x:Key="TextBox.MouseOver.Border" Color="#FF7EB4EA"/>
@@ -68,10 +68,11 @@
         <RowDefinition Height="*"/>
       </Grid.RowDefinitions>
       <Label Grid.Column="0" Grid.Row="0" Content="Password:" Padding="4" VerticalAlignment="Center" HorizontalAlignment="Right"/>
-      <local:PasswordTextBox3 Grid.Column="2" Grid.Row="0" x:Name="passTextBox" Text="ZZZZZYYY" VerticalAlignment="Top" TextOptions.TextFormattingMode="Display" FontFamily="Consolas" VerticalContentAlignment="Center" Padding="4" Margin="0" FontSize="14" MaxLines="1"/>
+      <local:PasswordTextBox3 Grid.Column="2" Grid.Row="0" x:Name="passTextBox" Text="ZZZZZYYY" VerticalAlignment="Top" TextOptions.TextFormattingMode="Display" FontFamily="Consolas" VerticalContentAlignment="Center" Padding="4" Margin="0" FontSize="16" MaxLines="1" FontWeight="Bold"/>
 
       <Label Grid.Column="0" Grid.Row="1" Content="Corrected:" Padding="4" VerticalAlignment="Center" HorizontalAlignment="Right"/>
-      <TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding ElementName=passTextBox, Path=Text, Converter={conv:PasswordConverter}}" FontFamily="Consolas" VerticalAlignment="Center" Padding="5" FontSize="14"/>
+      <TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding ElementName=passTextBox, Path=Password, StringFormat={}{0:PC}, TargetNullValue='........'}" FontFamily="Consolas" VerticalAlignment="Center" Padding="5" FontSize="14"/>
+      <!--<TextBlock Grid.Column="2" Grid.Row="1" Text="{Binding ElementName=passTextBox, Path=Password, Converter={conv:PasswordCorrectConverter}}" FontFamily="Consolas" VerticalAlignment="Center" Padding="5" FontSize="14"/>-->
 
       <Label Grid.Column="0" Grid.Row="2" Content="Normalized:" Padding="4" VerticalAlignment="Center" HorizontalAlignment="Right"/>
       <TextBlock Grid.Column="2" Grid.Row="2" Text="{Binding ElementName=passTextBox, Path=Password, Converter={conv:PasswordNormalizeConverter}}" FontFamily="Consolas" VerticalAlignment="Center" Padding="5" FontSize="14"/>

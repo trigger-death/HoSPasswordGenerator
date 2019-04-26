@@ -37,10 +37,10 @@ namespace HourglassPass.Generator {
 				new FrameworkPropertyMetadata(InvalidText));
 
 		public static readonly DependencyProperty InvalidForegroundProperty =
-			DependencyProperty.Register("InvalidForeground", typeof(Brush), typeof(PasswordTextBox2),
+			DependencyProperty.Register("InvalidForeground", typeof(Brush), typeof(PasswordTextBox3),
 				new FrameworkPropertyMetadata(Brushes.IndianRed));
 		public static readonly DependencyProperty InvalidBackgroundProperty =
-			DependencyProperty.Register("InvalidBackground", typeof(Brush), typeof(PasswordTextBox2),
+			DependencyProperty.Register("InvalidBackground", typeof(Brush), typeof(PasswordTextBox3),
 				new FrameworkPropertyMetadata(Brushes.White));
 
 		//public static readonly DependencyProperty PasswordProperty = PasswordPropertyKey.DependencyProperty;
